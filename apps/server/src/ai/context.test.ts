@@ -21,8 +21,8 @@ const data: CampaignData = {
 };
 
 const chat: ChatMessage[] = [
-  { id: "m1", campaignId: "c", authorId: "alice", speaker: "Alice", kind: "chat", text: "J'entre dans la taverne", emotion: null, roll: null, visibility: "all", visibleTo: [], createdAt: "" },
-  { id: "m2", campaignId: "c", authorId: "alice", speaker: "Alice", kind: "chat", text: "Je vole une bourse", emotion: null, roll: null, visibility: "gm", visibleTo: [], createdAt: "" },
+  { id: "m1", campaignId: "c", authorId: "alice", speaker: "Alice", kind: "chat", text: "J'entre dans la taverne", emotion: null, roll: null, visibility: "all", visibleTo: [], audio: null, createdAt: "" },
+  { id: "m2", campaignId: "c", authorId: "alice", speaker: "Alice", kind: "chat", text: "Je vole une bourse", emotion: null, roll: null, visibility: "gm", visibleTo: [], audio: null, createdAt: "" },
 ];
 
 describe("contexte de l'IA", () => {

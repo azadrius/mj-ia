@@ -1,6 +1,7 @@
 import type { CampaignMode, CampaignView, Role, Token } from "@mj-ia/shared";
 import { useEffect, useState } from "react";
 import { api } from "../api";
+import { UsagePanel } from "./UsagePanel";
 
 const MODES: Record<CampaignMode, string> = {
   human: "MJ humain",
@@ -23,6 +24,7 @@ export function GmPanel({ view, selected, sceneId, onSceneView }: {
       <ScenesSection view={view} sceneId={sceneId} onSceneView={onSceneView} />
       {sceneId && <NewTokenSection view={view} sceneId={sceneId} />}
       <MembersSection view={view} />
+      <UsagePanel campaignId={view.campaign.id} />
     </>
   );
 }

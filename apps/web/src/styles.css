@@ -106,3 +106,7 @@ aside { width: 360px; border-left: 1px solid var(--line); display: flex; flex-di
 .notice { background: #4a2020; color: #ffd6d0; padding: 6px 12px; font-size: 13px; }
 [hidden] { display: none !important; }
 .msg { flex-shrink: 0; }
+button.voice.on { background: #2f5d3f; }
+table.usage { width: 100%; border-collapse: collapse; font-size: 12px; }
+table.usage th, table.usage td { text-align: right; padding: 3px 4px; border-bottom: 1px solid var(--line); }
+table.usage th:first-child, table.usage td:first-child { text-align: left; }

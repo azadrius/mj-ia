@@ -43,7 +43,16 @@ export interface ChatMessage {
   roll: DiceRoll | null;
   visibility: Visibility;
   visibleTo: string[];
+  /** Réplique lue à voix haute (narration, PNJ), si la synthèse vocale est active. */
+  audio: MessageAudio | null;
   createdAt: string;
+}
+
+export interface MessageAudio {
+  url: string;
+  /** Décalage de hauteur à appliquer à la lecture (centièmes de demi-ton). */
+  pitchCents: number;
+  volume: number;
 }
 
 export function canSeeMessage(message: ChatMessage, me: Member) {

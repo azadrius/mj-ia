@@ -13,6 +13,8 @@ import { postMessage } from "../chat";
 import { db } from "../db/client";
 import { campaigns, journalEntries, sheets, tokens } from "../db/schema";
 import { broadcastTokens, notifyCampaignChanged } from "../realtime";
+import { synthesize } from "../tts/piper";
+import { recordSpeech } from "../usage";
 import { collectSecrets } from "./context";
 
 export const AI_NAME = "MJ IA";
@@ -38,12 +40,17 @@ export const toolImpl = {
       return `Refusé : ce texte recopie un secret du MJ (« ${leak} »). Les joueurs ne doivent le découvrir que par le jeu. Reformule sans le révéler.`;
     }
     const narrator = /^narrat/i.test(input.speaker.trim());
+    const speaker = narrator ? "Narrateur" : input.speaker.trim();
+    // Mesure : chaque caractère lu compte, même quand la voix est gratuite.
+    await recordSpeech(ctx.campaignId, narrator ? "narration" : "npc", input.text);
+    const audio = await synthesize(ctx.campaignId, speaker, input.text, input.emotion);
     await postMessage(ctx.campaignId, {
       authorId: null,
-      speaker: narrator ? "Narrateur" : input.speaker.trim(),
+      speaker,
       kind: narrator ? "narration" : "npc",
       text: input.text,
       emotion: input.emotion,
+      audio,
       visibility: input.to.length ? "some" : "all",
       visibleTo: input.to,
     });

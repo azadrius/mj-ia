@@ -53,7 +53,7 @@ describe("commandes du chat", () => {
 describe("visibilité des messages", () => {
   const msg = (m: Partial<ChatMessage>): ChatMessage => ({
     id: "m", campaignId: "c", authorId: null, speaker: "", kind: "chat", text: "", emotion: null,
-    roll: null, visibility: "all", visibleTo: [], createdAt: "", ...m,
+    roll: null, visibility: "all", visibleTo: [], audio: null, createdAt: "", ...m,
   });
   it("chuchotements et messages au MJ", () => {
     const whisper = msg({ authorId: "alice", visibility: "some", visibleTo: ["bob"] });
