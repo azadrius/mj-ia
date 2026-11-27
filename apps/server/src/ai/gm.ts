@@ -57,7 +57,29 @@ const getClient = () => (client ??= new Anthropic());
 const running = new Set<string>();
 const pending = new Map<string, AiTrigger[]>();
 
+/**
+ * À la table, on laisse les joueurs finir leur échange avant que l'IA réponde :
+ * chaque nouveau message de table repousse le tour de TABLE_DEBOUNCE_MS.
+ */
+export const TABLE_DEBOUNCE_MS = Number(process.env.AI_TABLE_DEBOUNCE_MS ?? 1500);
+const tableTimers = new Map<string, NodeJS.Timeout>();
+
 export function requestAiTurn(campaignId: string, trigger: AiTrigger) {
+  if (trigger.kind === "table" && TABLE_DEBOUNCE_MS > 0) {
+    clearTimeout(tableTimers.get(campaignId));
+    tableTimers.set(
+      campaignId,
+      setTimeout(() => {
+        tableTimers.delete(campaignId);
+        enqueueTurn(campaignId, trigger);
+      }, TABLE_DEBOUNCE_MS),
+    );
+    return;
+  }
+  enqueueTurn(campaignId, trigger);
+}
+
+function enqueueTurn(campaignId: string, trigger: AiTrigger) {
   const queue = pending.get(campaignId) ?? [];
   // Plusieurs messages de table d'affilée : un seul tour suffit.
   if (!(trigger.kind === "table" && queue.some((t) => t.kind === "table"))) queue.push(trigger);

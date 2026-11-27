@@ -68,3 +68,54 @@ export function toDiscordPcm(wav: WavInfo, pitchCents = 0, volume = 1): Buffer {
   }
   return out;
 }
+
+/** Fréquence attendue par Whisper. */
+export const STT_RATE = 16_000;
+
+/**
+ * Voix d'un joueur reçue de Discord (PCM 16 bits, stéréo, 48 kHz) vers du
+ * mono 16 kHz pour Whisper : moyenne des canaux puis moyenne de 3 échantillons.
+ */
+export function discordPcmToMono16k(pcm: Buffer): Int16Array {
+  const frames = Math.floor(pcm.length / 4);
+  const factor = DISCORD_RATE / STT_RATE; // 3
+  const out = new Int16Array(Math.floor(frames / factor));
+  for (let i = 0; i < out.length; i++) {
+    let sum = 0;
+    for (let k = 0; k < factor; k++) {
+      const f = (i * factor + k) * 4;
+      sum += pcm.readInt16LE(f) + pcm.readInt16LE(f + 2);
+    }
+    out[i] = Math.round(sum / (factor * 2));
+  }
+  return out;
+}
+
+/** Encapsule du PCM 16 bits mono dans un fichier WAV. */
+export function encodeWav(samples: Int16Array, sampleRate: number): Buffer {
+  const data = samples.length * 2;
+  const buf = Buffer.alloc(44 + data);
+  buf.write("RIFF", 0, "ascii");
+  buf.writeUInt32LE(36 + data, 4);
+  buf.write("WAVE", 8, "ascii");
+  buf.write("fmt ", 12, "ascii");
+  buf.writeUInt32LE(16, 16);
+  buf.writeUInt16LE(1, 20); // PCM
+  buf.writeUInt16LE(1, 22); // mono
+  buf.writeUInt32LE(sampleRate, 24);
+  buf.writeUInt32LE(sampleRate * 2, 28);
+  buf.writeUInt16LE(2, 32);
+  buf.writeUInt16LE(16, 34);
+  buf.write("data", 36, "ascii");
+  buf.writeUInt32LE(data, 40);
+  for (let i = 0; i < samples.length; i++) buf.writeInt16LE(samples[i], 44 + i * 2);
+  return buf;
+}
+
+/** Niveau sonore moyen (RMS, 0 à 32768) : sert à jeter les clics et les souffles. */
+export function rms(samples: Int16Array): number {
+  if (!samples.length) return 0;
+  let sum = 0;
+  for (const s of samples) sum += s * s;
+  return Math.sqrt(sum / samples.length);
+}

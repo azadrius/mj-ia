@@ -1,3 +1,5 @@
+# Tout tourne sur le PC qui héberge la table : `docker compose up -d --build`.
+# Seule l'API Claude (MJ IA) est un service extérieur.
 services:
   db:
     image: postgres:16
@@ -9,10 +11,62 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mjia"]
+      interval: 5s
+      retries: 10
+
+  # Voix du MJ et des PNJ (gratuit, local).
   piper:
     build: ./docker/piper
     ports:
       - "5000:5000"
     restart: unless-stopped
+
+  # Écoute des joueurs (gratuit, local). WHISPER_MODEL : tiny, base, small, medium.
+  whisper:
+    build: ./docker/whisper
+    environment:
+      WHISPER_MODEL: ${WHISPER_MODEL:-small}
+    ports:
+      - "5001:5001"
+    volumes:
+      - whisper-models:/root/.cache/huggingface
+    restart: unless-stopped
+
+  # La table, le MJ IA et le bot Discord. Réglages dans .env (voir .env.example).
+  app:
+    build: .
+    profiles: ["app"]
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://mjia:mjia@db:5432/mjia
+      PIPER_URL: http://piper:5000
+      WHISPER_URL: http://whisper:5001
+    ports:
+      - "3001:3001"
+    volumes:
+      - uploads:/data/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+      piper:
+        condition: service_started
+      whisper:
+        condition: service_started
+    restart: unless-stopped
+
+  # Adresse publique gratuite pour les joueurs (https://….trycloudflare.com, affichée dans les logs).
+  tunnel:
+    image: cloudflare/cloudflared:2024.12.2
+    profiles: ["tunnel"]
+    command: tunnel --no-autoupdate --url http://app:3001
+    depends_on:
+      - app
+    restart: unless-stopped
+
 volumes:
   pgdata:
+  uploads:
+  whisper-models:

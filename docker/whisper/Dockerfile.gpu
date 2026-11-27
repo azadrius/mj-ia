@@ -1,0 +1,12 @@
+# Variante pour carte NVIDIA (Windows 11 + Docker Desktop/WSL2, ou Linux + nvidia-container-toolkit).
+# faster-whisper 1.2 a besoin de CUDA 12 et cuDNN 9.
+FROM nvidia/cuda:12.6.3-cudnn-runtime-ubuntu22.04
+RUN apt-get update && apt-get install -y --no-install-recommends python3 python3-pip && rm -rf /var/lib/apt/lists/*
+RUN pip3 install --no-cache-dir "faster-whisper==1.2.1" flask
+WORKDIR /app
+COPY server.py .
+# Sur GPU, large-v3-turbo est rapide et bien meilleur en français que small.
+ENV WHISPER_MODEL=large-v3-turbo WHISPER_DEVICE=cuda WHISPER_COMPUTE_TYPE=float16
+EXPOSE 5001
+# Le modèle est téléchargé au premier démarrage (gardé dans le volume whisper-models).
+CMD ["python3", "server.py"]

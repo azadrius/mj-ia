@@ -34,7 +34,8 @@ type NewMessage = {
   source?: MessageSource;
 };
 
-export type MessageSource = "web" | "discord" | "ai";
+/** "voice" : phrase dite dans le salon vocal Discord et transcrite par Whisper. */
+export type MessageSource = "web" | "discord" | "voice" | "ai";
 
 /** Abonnés aux nouveaux messages (ex. le bot Discord). */
 export const messageListeners: ((campaignId: string, message: ChatMessage, source: MessageSource) => void | Promise<void>)[] = [];

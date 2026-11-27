@@ -17,7 +17,8 @@ export async function createSession(reply: FastifyReply, userId: string) {
     path: "/",
     httpOnly: true,
     sameSite: "lax",
-    secure: env.isProduction,
+    // Cookie « Secure » seulement derrière HTTPS (tunnel), pour que http://localhost marche aussi.
+    secure: env.appUrl.startsWith("https://"),
     expires: expiresAt,
   });
 }

@@ -51,3 +51,34 @@ describe("audio pour Discord", () => {
     expect(pcm.readInt16LE(4)).toBe(-32768);
   });
 });
+
+describe("voix des joueurs vers Whisper", () => {
+  it("passe du stéréo 48 kHz au mono 16 kHz", async () => {
+    const { discordPcmToMono16k } = await import("./audio");
+    const frames = 4800; // 0,1 s
+    const pcm = Buffer.alloc(frames * 4);
+    for (let i = 0; i < frames; i++) {
+      pcm.writeInt16LE(1000, i * 4);
+      pcm.writeInt16LE(3000, i * 4 + 2);
+    }
+    const mono = discordPcmToMono16k(pcm);
+    expect(mono.length).toBe(1600);
+    expect(mono[0]).toBe(2000);
+    expect(mono[1599]).toBe(2000);
+  });
+
+  it("produit un WAV que parseWav relit", async () => {
+    const { encodeWav, parseWav } = await import("./audio");
+    const samples = Int16Array.from([0, 100, -100, 32767, -32768]);
+    const wav = parseWav(encodeWav(samples, 16000));
+    expect(wav.sampleRate).toBe(16000);
+    expect(wav.channels).toBe(1);
+    expect(Array.from(wav.samples)).toEqual(Array.from(samples));
+  });
+
+  it("mesure le niveau sonore", async () => {
+    const { rms } = await import("./audio");
+    expect(rms(new Int16Array(10))).toBe(0);
+    expect(rms(Int16Array.from([1000, -1000]))).toBe(1000);
+  });
+});

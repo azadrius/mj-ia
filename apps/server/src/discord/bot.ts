@@ -5,6 +5,7 @@ import {
   AudioPlayerStatus,
   createAudioPlayer,
   createAudioResource,
+  EndBehaviorType,
   entersState,
   joinVoiceChannel,
   StreamType,
@@ -26,18 +27,22 @@ import {
   type Message,
 } from "discord.js";
 import { and, eq, isNotNull } from "drizzle-orm";
-import { handleChatInput, messageListeners } from "../chat";
+import prism from "prism-media";
+import { handleChatInput, messageListeners, type MessageSource } from "../chat";
 import { db } from "../db/client";
 import { loadMember } from "../db/load";
 import { campaigns, users } from "../db/schema";
-import { discordEnv, env } from "../env";
-import { parseWav, toDiscordPcm } from "./audio";
+import { discordEnv, env, sttEnv } from "../env";
+import { transcribe } from "../stt/whisper";
+import { discordPcmToMono16k, encodeWav, parseWav, rms, STT_RATE, toDiscordPcm } from "./audio";
 import { formatForDiscord } from "./format";
 
 /**
  * Bot Discord : il relie un salon textuel et un salon vocal à une campagne.
  * - Les répliques publiques de l'IA sont lues dans le salon vocal (voix Piper).
  * - Le chat de la table et le salon textuel se répondent dans les deux sens.
+ * - Sur demande (/mj ecouter), le bot écoute les joueurs : Whisper transcrit
+ *   chaque phrase, qui part au chat de la table comme si elle avait été tapée.
  */
 
 const commands = [
@@ -51,6 +56,8 @@ const commands = [
         .addStringOption((o) => o.setName("code").setDescription("Code d'invitation de la campagne").setRequired(true)),
     )
     .addSubcommand((s) => s.setName("rejoindre").setDescription("Le bot rejoint ton salon vocal et y lit les répliques"))
+    .addSubcommand((s) => s.setName("ecouter").setDescription("Le bot écoute les joueurs et transcrit ce qu'ils disent pour le MJ IA"))
+    .addSubcommand((s) => s.setName("sourdine").setDescription("Le bot arrête d'écouter (il continue de parler)"))
     .addSubcommand((s) => s.setName("quitter").setDescription("Le bot quitte le salon vocal"))
     .addSubcommand((s) => s.setName("delier").setDescription("Retire le lien entre ce serveur et la campagne"))
     .addSubcommand((s) => s.setName("statut").setDescription("Affiche la campagne liée")),
@@ -61,10 +68,22 @@ const commands = [
 ].map((c) => c.toJSON());
 
 interface VoiceSession {
+  guildId: string;
+  channelId: string;
   connection: VoiceConnection;
   player: AudioPlayer;
   queue: MessageAudio[];
+  /** Campagne écoutée, ou null si le bot n'écoute pas. */
+  listeningCampaignId: string | null;
+  /** Les transcriptions partent au chat dans l'ordre où les phrases ont été dites. */
+  transcripts: Promise<void>;
+  onSpeaking?: (discordUserId: string) => void;
 }
+
+/** En dessous, c'est un clic, une toux ou un souffle : on ne l'envoie pas à Whisper. */
+const MIN_SPEECH_MS = 600;
+const MAX_SPEECH_MS = 30_000;
+const MIN_LEVEL = 300;
 
 const voiceSessions = new Map<string, VoiceSession>(); // par serveur Discord
 const warnedUsers = new Map<string, number>();
@@ -181,6 +200,29 @@ async function handleCommand(interaction: ChatInputCommandInteraction) {
     await joinVoice(guild, voice.id);
     return interaction.editReply(`Je suis dans 🔊 ${voice.name} : je lirai la narration et les répliques des PNJ.`);
   }
+  if (sub === "ecouter") {
+    if (sttEnv.provider === "none") return interaction.reply({ content: "L'écoute est désactivée sur le serveur (STT_PROVIDER=none).", flags: MessageFlags.Ephemeral });
+    const voice = (interaction.member as GuildMember).voice.channel;
+    let session = voiceSessions.get(guild.id);
+    if (!session && !voice) return interaction.reply({ content: "Rejoins d'abord un salon vocal.", flags: MessageFlags.Ephemeral });
+    await interaction.deferReply();
+    if (!session && voice) {
+      await db.update(campaigns).set({ discordVoiceChannelId: voice.id }).where(eq(campaigns.id, campaign.id));
+      await joinVoice(guild, voice.id);
+      session = voiceSessions.get(guild.id);
+    }
+    if (!session) return interaction.editReply("Je n'arrive pas à rejoindre le salon vocal.");
+    startListening(session, campaign.id);
+    return interaction.editReply(
+      "🎙️ J'écoute le salon vocal. Ce que vous dites est transcrit (sur le PC qui héberge la table, rien ne part ailleurs que vers le MJ IA) " +
+        "et envoyé au chat de la table. Seuls les membres de la campagne sont transcrits. /mj sourdine pour arrêter.",
+    );
+  }
+  if (sub === "sourdine") {
+    const session = voiceSessions.get(guild.id);
+    if (session) stopListening(session);
+    return interaction.reply("🔇 Je n'écoute plus le salon vocal.");
+  }
   if (sub === "quitter") {
     leaveVoice(guild.id);
     await db.update(campaigns).set({ discordVoiceChannelId: null }).where(eq(campaigns.id, campaign.id));
@@ -221,7 +263,7 @@ async function handleDiscordMessage(message: Message) {
 }
 
 /** Nouveau message à la table : on l'envoie sur Discord s'il est public. */
-async function relayToDiscord(campaignId: string, message: ChatMessage, source: "web" | "discord" | "ai") {
+async function relayToDiscord(campaignId: string, message: ChatMessage, source: MessageSource) {
   if (!client?.isReady() || message.visibility !== "all") return;
   const [campaign] = await db
     .select()
@@ -248,7 +290,7 @@ async function joinVoice(guild: Guild, channelId: string) {
   await entersState(connection, VoiceConnectionStatus.Ready, 20_000);
   const player = createAudioPlayer();
   connection.subscribe(player);
-  const session: VoiceSession = { connection, player, queue: [] };
+  const session: VoiceSession = { guildId: guild.id, channelId, connection, player, queue: [], listeningCampaignId: null, transcripts: Promise.resolve() };
   player.on(AudioPlayerStatus.Idle, () => void playNext(session));
   player.on("error", (e) => console.warn("[discord] lecture :", e.message));
   voiceSessions.set(guild.id, session);
@@ -260,6 +302,65 @@ function leaveVoice(guildId: string) {
   session.player.stop(true);
   session.connection.destroy();
   voiceSessions.delete(guildId);
+}
+
+function startListening(session: VoiceSession, campaignId: string) {
+  if (session.listeningCampaignId) {
+    session.listeningCampaignId = campaignId;
+    return;
+  }
+  session.listeningCampaignId = campaignId;
+  // Le bot rejoint « sourd » par défaut : il faut lever la sourdine pour recevoir l'audio.
+  session.connection.rejoin({ channelId: session.channelId, selfDeaf: false, selfMute: false });
+  session.onSpeaking = (discordUserId) => onSpeakingStart(session, discordUserId);
+  session.connection.receiver.speaking.on("start", session.onSpeaking);
+}
+
+function stopListening(session: VoiceSession) {
+  if (!session.listeningCampaignId) return;
+  session.listeningCampaignId = null;
+  if (session.onSpeaking) session.connection.receiver.speaking.off("start", session.onSpeaking);
+  session.onSpeaking = undefined;
+  for (const stream of session.connection.receiver.subscriptions.values()) stream.destroy();
+  session.connection.rejoin({ channelId: session.channelId, selfDeaf: true, selfMute: false });
+}
+
+/** Un joueur commence à parler : on enregistre jusqu'au silence, puis on transcrit. */
+function onSpeakingStart(session: VoiceSession, discordUserId: string) {
+  const receiver = session.connection.receiver;
+  if (!session.listeningCampaignId || receiver.subscriptions.has(discordUserId) || discordUserId === client?.user?.id) return;
+  const opus = receiver.subscribe(discordUserId, { end: { behavior: EndBehaviorType.AfterSilence, duration: sttEnv.silenceMs } });
+  const decoder = new prism.opus.Decoder({ rate: 48_000, channels: 2, frameSize: 960 });
+  const chunks: Buffer[] = [];
+  let bytes = 0;
+  const maxBytes = (MAX_SPEECH_MS / 1000) * 48_000 * 4;
+  decoder.on("data", (chunk: Buffer) => {
+    if (bytes >= maxBytes) return;
+    chunks.push(chunk);
+    bytes += chunk.length;
+  });
+  decoder.on("error", (e: Error) => console.warn("[discord] décodage voix :", e.message));
+  opus.pipe(decoder);
+  opus.once("end", () => {
+    const campaignId = session.listeningCampaignId;
+    const durationMs = (bytes / (48_000 * 4)) * 1000;
+    if (!campaignId || durationMs < MIN_SPEECH_MS) return;
+    const pcm = Buffer.concat(chunks);
+    session.transcripts = session.transcripts
+      .then(() => transcribeAndPost(campaignId, discordUserId, pcm))
+      .catch((e) => console.warn("[discord] transcription :", (e as Error).message));
+  });
+}
+
+async function transcribeAndPost(campaignId: string, discordUserId: string, pcm: Buffer) {
+  const samples = discordPcmToMono16k(pcm);
+  if (rms(samples) < MIN_LEVEL) return;
+  const userId = await appUserId(discordUserId);
+  const me = userId && (await loadMember(campaignId, userId));
+  if (!me) return; // pas membre de la campagne : on ne transcrit pas
+  const text = await transcribe(encodeWav(samples, STT_RATE));
+  if (!text) return;
+  await handleChatInput(campaignId, me, text, "voice").catch((e) => console.warn("[discord] voix vers la table :", (e as Error).message));
 }
 
 function enqueueVoice(guildId: string, audio: MessageAudio) {

@@ -35,3 +35,11 @@ export const ttsEnv = {
 export const discordEnv = {
   botToken: process.env.DISCORD_BOT_TOKEN ?? "",
 };
+
+/** Écoute des joueurs : Whisper (gratuit, local) ou aucune. */
+export const sttEnv = {
+  provider: (process.env.STT_PROVIDER ?? "whisper") as "whisper" | "none",
+  whisperUrl: process.env.WHISPER_URL ?? "http://localhost:5001",
+  /** Durée de silence qui marque la fin d'une phrase. */
+  silenceMs: Number(process.env.STT_SILENCE_MS ?? 900),
+};
