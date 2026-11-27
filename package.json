@@ -1,0 +1,19 @@
+{
+  "name": "mj-ia",
+  "private": true,
+  "type": "module",
+  "workspaces": ["packages/*", "apps/*"],
+  "scripts": {
+    "dev": "concurrently -n server,web -c blue,green \"npm run dev -w @mj-ia/server\" \"npm run dev -w @mj-ia/web\"",
+    "build": "npm run build -w @mj-ia/web",
+    "start": "npm run start -w @mj-ia/server",
+    "db:generate": "npm run db:generate -w @mj-ia/server",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.7",
+    "typescript": "^5.9.3",
+    "vitest": "^5.1.2"
+  }
+}
