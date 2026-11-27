@@ -10,6 +10,7 @@ import {
   type DiceRoll,
   type Emotion,
   type Member,
+  type MessageAudio,
   type Visibility,
 } from "@mj-ia/shared";
 import { desc, eq } from "drizzle-orm";
@@ -26,6 +27,7 @@ type NewMessage = {
   text: string;
   emotion?: Emotion | null;
   roll?: DiceRoll | null;
+  audio?: MessageAudio | null;
   visibility?: Visibility;
   visibleTo?: string[];
 };
@@ -39,6 +41,7 @@ const toMessage = (row: typeof chatMessages.$inferSelect): ChatMessage => ({
   text: row.text,
   emotion: (row.emotion as Emotion | null) ?? null,
   roll: row.roll ?? null,
+  audio: row.audio ?? null,
   visibility: row.visibility,
   visibleTo: row.visibleTo,
   createdAt: row.createdAt.toISOString(),
@@ -56,6 +59,7 @@ export async function postMessage(campaignId: string, input: NewMessage): Promis
       text: input.text,
       emotion: input.emotion ?? null,
       roll: input.roll ?? null,
+      audio: input.audio ?? null,
       visibility: input.visibility ?? "all",
       visibleTo: input.visibleTo ?? [],
     })

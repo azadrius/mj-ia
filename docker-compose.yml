@@ -9,5 +9,10 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+  piper:
+    build: ./docker/piper
+    ports:
+      - "5000:5000"
+    restart: unless-stopped
 volumes:
   pgdata:

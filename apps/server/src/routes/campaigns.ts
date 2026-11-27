@@ -13,6 +13,7 @@ import { loadCampaignData, loadMember } from "../db/load";
 import { campaigns, journalEntries, members, scenes, sheets, tokens } from "../db/schema";
 import { aiEnv, env } from "../env";
 import { loadMessagesFor } from "../chat";
+import { usageReport } from "../usage";
 import { broadcastTokens, notifyCampaignChanged } from "../realtime";
 
 const visibility = z.enum(["gm", "all", "some"]);
@@ -148,6 +149,12 @@ export async function campaignRoutes(app: FastifyInstance) {
   });
 
   app.get("/api/ai/status", async () => ({ enabled: aiEnv.enabled }));
+
+  app.get("/api/campaigns/:id/usage", async (request, reply) => {
+    const ctx = await access(request, reply, { gm: true });
+    if (!ctx) return;
+    return usageReport(ctx.campaignId);
+  });
 
   app.patch("/api/campaigns/:id", async (request, reply) => {
     const ctx = await access(request, reply, { gm: true });

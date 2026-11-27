@@ -1,5 +1,5 @@
 import { boolean, integer, jsonb, pgTable, primaryKey, real, text, timestamp } from "drizzle-orm/pg-core";
-import type { DiceRoll } from "@mj-ia/shared";
+import type { DiceRoll, MessageAudio } from "@mj-ia/shared";
 
 const id = () => text("id").primaryKey().$defaultFn(() => crypto.randomUUID());
 const createdAt = () => timestamp("created_at", { withTimezone: true }).notNull().defaultNow();
@@ -96,7 +96,23 @@ export const chatMessages = pgTable("chat_messages", {
   text: text("text").notNull(),
   emotion: text("emotion"),
   roll: jsonb("roll").$type<DiceRoll>(),
+  audio: jsonb("audio").$type<MessageAudio>(),
   visibility: text("visibility", { enum: ["gm", "all", "some"] }).notNull().default("all"),
   visibleTo: jsonb("visible_to").$type<string[]>().notNull().default([]),
+  createdAt: createdAt(),
+});
+
+/** Mesure de consommation : caractères lus à voix haute et tokens de l'IA. */
+export const usageEvents = pgTable("usage_events", {
+  id: id(),
+  campaignId: text("campaign_id").notNull().references(() => campaigns.id, { onDelete: "cascade" }),
+  kind: text("kind", { enum: ["speech", "ai"] }).notNull(),
+  /** speech : narration ou npc. ai : modèle utilisé. */
+  detail: text("detail").notNull(),
+  characters: integer("characters").notNull().default(0),
+  inputTokens: integer("input_tokens").notNull().default(0),
+  cacheReadTokens: integer("cache_read_tokens").notNull().default(0),
+  cacheWriteTokens: integer("cache_write_tokens").notNull().default(0),
+  outputTokens: integer("output_tokens").notNull().default(0),
   createdAt: createdAt(),
 });

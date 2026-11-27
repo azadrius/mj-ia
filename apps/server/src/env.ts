@@ -21,3 +21,12 @@ export const aiEnv = {
   model: process.env.AI_MODEL ?? "claude-opus-5-5",
   effort: (process.env.AI_EFFORT ?? "low") as "low" | "medium" | "high" | "xhigh" | "max",
 };
+
+/** Voix : Piper (gratuit, local) ou aucune. */
+export const ttsEnv = {
+  provider: (process.env.TTS_PROVIDER ?? "piper") as "piper" | "none",
+  piperUrl: process.env.PIPER_URL ?? "http://localhost:5000",
+  narratorVoice: process.env.PIPER_NARRATOR_VOICE ?? "fr_FR-siwis-medium",
+  /** Les modèles à très nombreux locuteurs (ex. mls) sont limités pour garder des voix variées. */
+  maxSpeakersPerModel: Number(process.env.PIPER_MAX_SPEAKERS ?? 20),
+};
