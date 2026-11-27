@@ -30,7 +30,7 @@ Les permissions demandées : voir les salons, envoyer des messages, lire l'histo
 ## 3. Lancer
 
 ```bash
-docker compose up -d   # Postgres + Piper
+docker compose up -d   # Postgres, Piper (voix) et Whisper (écoute)
 npm run dev            # ou npm start
 ```
 
@@ -44,6 +44,14 @@ Chaque joueur doit s'être **connecté une fois sur la table avec Discord** et a
 2. Dans le salon textuel de la partie, il tape `/mj lier code:<code d'invitation>` (le code est la fin du lien d'invitation, dans le panneau MJ).
 3. Le bot rejoint le salon vocal et confirme.
 
+### Faire écouter le bot
+
+`/mj ecouter` : le bot écoute le salon vocal. Chaque phrase d'un membre de la campagne est transcrite par Whisper (sur le PC qui héberge la table), puis part au chat de la table comme si le joueur l'avait tapée. En mode MJ IA, l'IA attend 1,5 s de calme (`AI_TABLE_DEBOUNCE_MS`) puis répond à voix haute. `/mj sourdine` arrête l'écoute. Le bot annonce l'écoute dans le salon : préviens tes joueurs.
+
+- Une phrase se termine après 0,9 s de silence (`STT_SILENCE_MS`). Les bruits de moins de 0,6 s sont ignorés.
+- Les personnes qui ne sont pas membres de la campagne ne sont jamais transcrites.
+- Après un redémarrage du serveur, l'écoute est coupée : retape `/mj ecouter`.
+
 Autres commandes : `/mj rejoindre` (le bot vient dans ton salon vocal), `/mj quitter`, `/mj statut`, `/mj delier`, `/r formule`.
 
 Seuls les messages **publics** passent sur Discord : chuchotements, messages au MJ, jets secrets et conseils de l'IA restent sur la table.
@@ -56,4 +64,6 @@ Seuls les messages **publics** passent sur Discord : chuchotements, messages au 
 | `Used disallowed intents` | Active **Message Content Intent** (onglet Bot). |
 | Les commandes `/mj` n'apparaissent pas | Réinvite le bot avec le lien ci-dessus (portée `applications.commands`), puis redémarre le serveur. |
 | Le bot est en vocal mais muet | Vérifie que Piper tourne (`curl localhost:5000/voices`) et que l'IA parle bien dans le chat de la table. |
+| Le bot n'entend personne après `/mj ecouter` | Vérifie que Whisper tourne (`curl localhost:5001/health`). Les logs montrent `[discord] transcription : …` en cas d'erreur. |
+| La transcription est lente | Utilise la version GPU (voir [installation-pc.md](installation-pc.md)) ou un modèle plus petit (`WHISPER_MODEL=base`). |
 | Le bot ne réagit pas à un joueur | Ce joueur doit se connecter une fois sur la table avec Discord et rejoindre la campagne. |

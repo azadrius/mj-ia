@@ -1,0 +1,16 @@
+# Whisper sur la carte NVIDIA. À ajouter à la commande :
+#   docker compose -f docker-compose.yml -f docker-compose.gpu.yml --profile app up -d --build
+services:
+  whisper:
+    build:
+      context: ./docker/whisper
+      dockerfile: Dockerfile.gpu
+    environment:
+      WHISPER_MODEL: ${WHISPER_MODEL:-large-v3-turbo}
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]

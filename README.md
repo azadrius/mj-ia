@@ -9,13 +9,22 @@ Une table de jeu de rôle en ligne avec un maître du jeu IA, pensée pour jouer
 3. **Voix sur Discord** : le bot écoute les joueurs et fait parler chaque PNJ avec sa voix et ses émotions.
 4. **Finitions** : brouillard de guerre, initiative, autres systèmes de JDR.
 
-## Démarrer en local
+## Installer sur ton PC (tout gratuit sauf l'IA)
+
+Guide pas à pas pour Windows 11 avec une carte NVIDIA : [docs/installation-pc.md](docs/installation-pc.md). En résumé :
+
+```bash
+cp .env.example .env
+docker compose -f docker-compose.yml -f docker-compose.gpu.yml --profile app up -d --build
+```
+
+## Développer en local
 
 Il faut Node.js 22 ou plus et Docker (pour PostgreSQL).
 
 ```bash
 cp .env.example .env        # puis ajuste si besoin
-docker compose up -d        # lance PostgreSQL et Piper (voix)
+docker compose up -d        # lance PostgreSQL, Piper (voix) et Whisper (écoute)
 npm install
 npm run dev                 # serveur sur :3001, webapp sur http://localhost:5173
 ```
@@ -114,7 +123,7 @@ Chaque réplique lue est comptée en caractères (narration et PNJ séparés), m
 
 ## Le bot Discord
 
-Le bot lit les répliques dans votre salon vocal et relie un salon textuel au chat de la table. Installation pas à pas : [docs/bot-discord.md](docs/bot-discord.md). Il démarre avec le serveur dès que `DISCORD_BOT_TOKEN` est renseigné.
+Le bot lit les répliques dans votre salon vocal et relie un salon textuel au chat de la table. Avec `/mj ecouter`, il écoute aussi les joueurs : **Whisper** (gratuit, local, `docker/whisper`) transcrit chaque phrase, qui part au chat de la table, et le MJ IA répond à voix haute. Installation pas à pas : [docs/bot-discord.md](docs/bot-discord.md). Il démarre avec le serveur dès que `DISCORD_BOT_TOKEN` est renseigné.
 
 ## Commandes utiles
 
