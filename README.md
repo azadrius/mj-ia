@@ -15,7 +15,7 @@ Il faut Node.js 22 ou plus et Docker (pour PostgreSQL).
 
 ```bash
 cp .env.example .env        # puis ajuste si besoin
-docker compose up -d        # lance PostgreSQL
+docker compose up -d        # lance PostgreSQL et Piper (voix)
 npm install
 npm run dev                 # serveur sur :3001, webapp sur http://localhost:5173
 ```
@@ -98,6 +98,23 @@ Le code est dans `apps/server/src/ai/`. À chaque tour, l'IA reçoit la campagne
 Le texte qu'elle écrit hors des outils n'est jamais montré aux joueurs. Garde-fou : `say` refuse un texte qui recopie un secret du MJ, et demande à l'IA de reformuler.
 
 Variables : `AI_MODEL` (par défaut `claude-opus-5-5` ; `claude-haiku-5-5` coûte beaucoup moins cher) et `AI_EFFORT` (`low` par défaut pour répondre vite).
+
+## La voix (étape 3, Piper)
+
+Les répliques de l'IA (narration et PNJ) sont lues à voix haute avec **Piper**, un moteur de synthèse vocale gratuit qui tourne en local. `docker compose up -d` le lance avec cinq voix françaises (siwis, upmc, tom, gilles, mls). La première construction télécharge les voix depuis Hugging Face.
+
+- Chaque PNJ reçoit une **voix stable** : le même nom donne toujours la même voix et la même hauteur. Le narrateur a sa voix à lui (`PIPER_NARRATOR_VOICE`).
+- L'**émotion** choisie par l'IA règle le débit, l'expressivité, la hauteur et le volume (`packages/shared/src/voice.ts`).
+- Chaque joueur active ou coupe la voix avec le bouton **Voix** en haut de la table. Le son est joué dans son navigateur, il l'entend donc pendant l'appel Discord.
+- Si Piper ne répond pas, les répliques restent écrites (`TTS_PROVIDER=none` coupe la voix).
+
+### Mesure de consommation
+
+Chaque réplique lue est comptée en caractères (narration et PNJ séparés), même avec Piper. Chaque appel à l'IA est compté en tokens. Le panneau MJ > **Consommation** affiche les 30 derniers jours par séance, le coût IA estimé, et l'offre ElevenLabs qui suffirait.
+
+## Le bot Discord
+
+Le bot lit les répliques dans votre salon vocal et relie un salon textuel au chat de la table. Installation pas à pas : [docs/bot-discord.md](docs/bot-discord.md). Il démarre avec le serveur dès que `DISCORD_BOT_TOKEN` est renseigné.
 
 ## Commandes utiles
 

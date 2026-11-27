@@ -4,6 +4,7 @@ import { postMessage, loadRecentMessages } from "../chat";
 import { loadCampaignData } from "../db/load";
 import { aiEnv } from "../env";
 import { emitAiBusy } from "../realtime";
+import { recordAiUsage } from "../usage";
 import { renderCampaignContext } from "./context";
 import { AI_NAME, buildTools, type ToolContext } from "./tools";
 
@@ -97,7 +98,7 @@ async function runTurn(campaignId: string, trigger: AiTrigger) {
   const advise = trigger.kind === "gm_advice";
   const ctx: ToolContext = { campaignId, data, mode: advise ? "advise" : "act" };
 
-  const final = await getClient().beta.messages.toolRunner({
+  const runner = getClient().beta.messages.toolRunner({
     model: aiEnv.model,
     max_tokens: 16000,
     output_config: { effort: aiEnv.effort },
@@ -114,6 +115,12 @@ async function runTurn(campaignId: string, trigger: AiTrigger) {
       },
     ],
   });
+
+  // Chaque appel au modèle pendant ce tour est mesuré (tokens et coût estimé).
+  for await (const message of runner) {
+    await recordAiUsage(campaignId, aiEnv.model, message.usage).catch(() => {});
+  }
+  const final = await runner.done();
 
   if (final.stop_reason === "refusal") {
     await postMessage(campaignId, {

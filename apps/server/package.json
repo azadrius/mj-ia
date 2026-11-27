@@ -10,12 +10,15 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.14.0",
+    "@discordjs/voice": "^0.19.2",
     "@fastify/cookie": "^11.1.5",
     "@fastify/multipart": "^10.1.9",
     "@fastify/static": "^11.0.0",
     "@mj-ia/shared": "*",
+    "discord.js": "^14.28.1",
     "drizzle-orm": "^0.45.4",
     "fastify": "^5.12.8",
+    "opusscript": "^0.1.1",
     "pg": "^8.23.1",
     "socket.io": "^4.8.4",
     "zod": "^4.6.7"

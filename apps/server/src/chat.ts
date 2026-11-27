@@ -10,6 +10,7 @@ import {
   type DiceRoll,
   type Emotion,
   type Member,
+  type MessageAudio,
   type Visibility,
 } from "@mj-ia/shared";
 import { desc, eq } from "drizzle-orm";
@@ -26,9 +27,17 @@ type NewMessage = {
   text: string;
   emotion?: Emotion | null;
   roll?: DiceRoll | null;
+  audio?: MessageAudio | null;
   visibility?: Visibility;
   visibleTo?: string[];
+  /** D'où vient le message (pour ne pas le renvoyer à sa source). */
+  source?: MessageSource;
 };
+
+export type MessageSource = "web" | "discord" | "ai";
+
+/** Abonnés aux nouveaux messages (ex. le bot Discord). */
+export const messageListeners: ((campaignId: string, message: ChatMessage, source: MessageSource) => void | Promise<void>)[] = [];
 
 const toMessage = (row: typeof chatMessages.$inferSelect): ChatMessage => ({
   id: row.id,
@@ -39,6 +48,7 @@ const toMessage = (row: typeof chatMessages.$inferSelect): ChatMessage => ({
   text: row.text,
   emotion: (row.emotion as Emotion | null) ?? null,
   roll: row.roll ?? null,
+  audio: row.audio ?? null,
   visibility: row.visibility,
   visibleTo: row.visibleTo,
   createdAt: row.createdAt.toISOString(),
@@ -56,6 +66,7 @@ export async function postMessage(campaignId: string, input: NewMessage): Promis
       text: input.text,
       emotion: input.emotion ?? null,
       roll: input.roll ?? null,
+      audio: input.audio ?? null,
       visibility: input.visibility ?? "all",
       visibleTo: input.visibleTo ?? [],
     })
@@ -69,6 +80,11 @@ export async function postMessage(campaignId: string, input: NewMessage): Promis
       const me = members.find((m) => m.userId === socket.data.userId);
       if (me && canSeeMessage(message, me)) socket.emit("chat:message", messageForMember(message, me));
     }
+  }
+  for (const listener of messageListeners) {
+    Promise.resolve(listener(campaignId, message, input.source ?? (input.authorId ? "web" : "ai"))).catch((e) =>
+      console.warn("[chat] relais :", (e as Error).message),
+    );
   }
   return message;
 }
@@ -90,7 +106,7 @@ export async function loadMessagesFor(campaignId: string, me: Member, limit = 10
 }
 
 /** Traite une ligne tapée par un membre dans le chat. */
-export async function handleChatInput(campaignId: string, me: Member, input: string) {
+export async function handleChatInput(campaignId: string, me: Member, input: string, source: MessageSource = "web") {
   if (!input.trim()) return;
   if (input.length > 4000) throw new Error("Message trop long");
   const data = await loadCampaignData(campaignId);
@@ -101,7 +117,7 @@ export async function handleChatInput(campaignId: string, me: Member, input: str
   switch (command.type) {
     case "say":
       if (me.role === "spectator") throw new Error("Les spectateurs ne peuvent pas parler à la table");
-      await postMessage(campaignId, { authorId: me.userId, speaker: me.name, kind: "chat", text: command.text });
+      await postMessage(campaignId, { authorId: me.userId, speaker: me.name, kind: "chat", text: command.text, source });
       if (mode === "ai_gm") requestAiTurn(campaignId, { kind: "table" });
       return;
 

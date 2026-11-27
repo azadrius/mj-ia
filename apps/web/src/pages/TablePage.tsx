@@ -6,11 +6,13 @@ import { JournalPanel } from "../components/JournalPanel";
 import { MapCanvas } from "../components/MapCanvas";
 import { SheetsPanel } from "../components/SheetsPanel";
 import { useCampaign } from "../useCampaign";
+import { useVoice } from "../useVoice";
 
 type Tab = "chat" | "gm" | "sheets" | "journal";
 
 export function TablePage({ campaignId }: { campaignId: string }) {
-  const { view, error, moveToken, messages, sendChat, aiBusy, notice } = useCampaign(campaignId);
+  const voice = useVoice();
+  const { view, error, moveToken, messages, sendChat, aiBusy, notice } = useCampaign(campaignId, voice.enqueue);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [openSheetId, setOpenSheetId] = useState<string | null>(null);
   const [gmSceneId, setGmSceneId] = useState<string | null>(null);
@@ -44,6 +46,9 @@ export function TablePage({ campaignId }: { campaignId: string }) {
         <strong>{view.campaign.name}</strong>
         <span className="muted">{scene ? scene.name : ""}{gm && sceneId !== view.campaign.activeSceneId ? " (aperçu MJ)" : ""}</span>
         <span className="spacer" />
+        <button className={`small voice${voice.enabled ? " on" : ""}`} onClick={voice.toggle} title="Lire les répliques à voix haute">
+          {voice.enabled ? "🔊 Voix activée" : "🔇 Voix coupée"}
+        </button>
         <span>{view.me.name} · {gm ? "MJ" : view.me.role === "player" ? "Joueur" : "Spectateur"}</span>
       </header>
       <main>
