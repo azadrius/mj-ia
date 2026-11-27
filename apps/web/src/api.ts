@@ -1,3 +1,5 @@
+import type { Asset, AssetKind } from "@mj-ia/shared";
+
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
     super(message);
@@ -25,5 +27,11 @@ export const api = {
     const form = new FormData();
     form.append("file", file);
     return request<{ url: string }>("POST", `/campaigns/${campaignId}/uploads`, form);
+  },
+  /** Envoi d'un fichier dans la bibliothèque de la campagne. */
+  uploadAsset: (campaignId: string, kind: AssetKind, file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    return request<Asset>("POST", `/campaigns/${campaignId}/assets?kind=${kind}`, form);
   },
 };

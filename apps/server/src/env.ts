@@ -12,6 +12,8 @@ export const env = {
   discordClientSecret: process.env.DISCORD_CLIENT_SECRET ?? "",
   allowDevLogin: process.env.ALLOW_DEV_LOGIN === "true",
   uploadDir: process.env.UPLOAD_DIR ?? new URL("../uploads", import.meta.url).pathname,
+  /** Documents de la bibliothèque : jamais servis tels quels, toujours via une route qui vérifie les droits. */
+  documentDir: process.env.DOCUMENT_DIR ?? new URL("../documents", import.meta.url).pathname,
   isProduction: process.env.NODE_ENV === "production",
 };
 

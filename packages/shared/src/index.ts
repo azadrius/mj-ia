@@ -6,3 +6,4 @@ export * from "./systems/dnd5e";
 export * from "./dice";
 export * from "./chat";
 export * from "./voice";
+export * from "./battlemap";

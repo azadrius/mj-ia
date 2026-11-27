@@ -3,12 +3,13 @@ import { useState } from "react";
 import { ChatPanel } from "../components/ChatPanel";
 import { GmPanel } from "../components/GmPanel";
 import { JournalPanel } from "../components/JournalPanel";
+import { LibraryPanel } from "../components/LibraryPanel";
 import { MapCanvas } from "../components/MapCanvas";
 import { SheetsPanel } from "../components/SheetsPanel";
 import { useCampaign } from "../useCampaign";
 import { useVoice } from "../useVoice";
 
-type Tab = "chat" | "gm" | "sheets" | "journal";
+type Tab = "chat" | "gm" | "sheets" | "journal" | "library";
 
 export function TablePage({ campaignId }: { campaignId: string }) {
   const voice = useVoice();
@@ -73,6 +74,7 @@ export function TablePage({ campaignId }: { campaignId: string }) {
             {gm && <button className={tab === "gm" ? "on" : ""} onClick={() => setTab("gm")}>MJ</button>}
             <button className={tab === "sheets" ? "on" : ""} onClick={() => setTab("sheets")}>Fiches</button>
             <button className={tab === "journal" ? "on" : ""} onClick={() => setTab("journal")}>Journal</button>
+            <button className={tab === "library" ? "on" : ""} onClick={() => setTab("library")} title="Documents, images de jetons, battle maps">Biblio</button>
           </nav>
           {notice && <div className="notice">{notice}</div>}
           {tab === "chat" && <ChatPanel view={view} messages={messages} aiBusy={aiBusy} onSend={sendChat} />}
@@ -82,6 +84,7 @@ export function TablePage({ campaignId }: { campaignId: string }) {
             )}
             {tab === "sheets" && <SheetsPanel view={view} openSheetId={openSheetId} onOpen={setOpenSheetId} />}
             {tab === "journal" && <JournalPanel view={view} />}
+            {tab === "library" && <LibraryPanel view={view} />}
           </div>
         </aside>
       </main>

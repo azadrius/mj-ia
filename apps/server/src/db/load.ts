@@ -1,7 +1,7 @@
-import type { CampaignData, Member, Scene, Token } from "@mj-ia/shared";
+import type { Asset, CampaignData, Member, Scene, Token } from "@mj-ia/shared";
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { db } from "./client";
-import { campaigns, journalEntries, members, scenes, sheets, tokens, users } from "./schema";
+import { assets, campaigns, journalEntries, members, scenes, sheets, tokens, users } from "./schema";
 
 export async function loadMembers(campaignId: string): Promise<Member[]> {
   const rows = await db
@@ -32,6 +32,12 @@ export const toToken = (t: typeof tokens.$inferSelect): Token => ({
   imageUrl: t.imageUrl, sheetId: t.sheetId, controlledBy: t.controlledBy, hidden: t.hidden,
 });
 
+export const toAsset = (a: typeof assets.$inferSelect): Asset => ({
+  id: a.id, campaignId: a.campaignId, kind: a.kind, name: a.name,
+  url: a.kind === "document" ? `/api/campaigns/${a.campaignId}/assets/${a.id}/file` : `/uploads/${a.campaignId}/${a.file}`,
+  mime: a.mime, size: a.size, uploadedBy: a.uploadedBy, visibility: a.visibility, visibleTo: a.visibleTo,
+});
+
 /** Charge toute la campagne, sans filtre. À passer dans buildCampaignView avant envoi. */
 export async function loadCampaignData(campaignId: string): Promise<CampaignData | null> {
   const [campaign] = await db.select().from(campaigns).where(eq(campaigns.id, campaignId));
@@ -39,11 +45,12 @@ export async function loadCampaignData(campaignId: string): Promise<CampaignData
 
   const sceneRows = await db.select().from(scenes).where(eq(scenes.campaignId, campaignId)).orderBy(asc(scenes.createdAt));
   const sceneIds = sceneRows.map((s) => s.id);
-  const [memberRows, tokenRows, sheetRows, journalRows] = await Promise.all([
+  const [memberRows, tokenRows, sheetRows, journalRows, assetRows] = await Promise.all([
     loadMembers(campaignId),
     sceneIds.length ? db.select().from(tokens).where(inArray(tokens.sceneId, sceneIds)) : Promise.resolve([]),
     db.select().from(sheets).where(eq(sheets.campaignId, campaignId)).orderBy(asc(sheets.name)),
     db.select().from(journalEntries).where(eq(journalEntries.campaignId, campaignId)).orderBy(asc(journalEntries.createdAt)),
+    db.select().from(assets).where(eq(assets.campaignId, campaignId)).orderBy(asc(assets.kind), asc(assets.name)),
   ]);
 
   return {
@@ -62,5 +69,6 @@ export async function loadCampaignData(campaignId: string): Promise<CampaignData
       id: j.id, campaignId: j.campaignId, kind: j.kind, title: j.title, content: j.content,
       gmNotes: j.gmNotes, visibility: j.visibility, visibleTo: j.visibleTo,
     })),
+    assets: assetRows.map(toAsset),
   };
 }

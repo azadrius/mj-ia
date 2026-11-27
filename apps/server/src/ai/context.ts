@@ -63,6 +63,15 @@ export function renderCampaignContext(data: CampaignData, recent: ChatMessage[])
     if (j.gmNotes) lines.push(`SECRETS DU MJ : ${j.gmNotes}`);
   }
 
+  const docs = data.assets.filter((a) => a.kind === "document");
+  if (docs.length) {
+    lines.push("", "## Documents de la bibliothèque (tu ne peux pas les lire, seulement y renvoyer les joueurs)");
+    for (const d of docs) {
+      const vis = d.visibility === "all" ? "tous les joueurs" : d.visibility === "gm" ? "MJ seulement" : d.visibleTo.map(name).join(", ");
+      lines.push(`- ${d.name} (${vis})`);
+    }
+  }
+
   lines.push("", "## Chat récent (du plus ancien au plus récent)");
   for (const m of recent) {
     lines.push(`[${audience(m, members)}] ${m.speaker}${m.kind === "roll" ? " (jet)" : ""} : ${m.text}`);

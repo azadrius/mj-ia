@@ -1,6 +1,15 @@
-import type { CampaignMode, CampaignView, Role, Token } from "@mj-ia/shared";
+import {
+  gridFromImage,
+  isUniversalVttFile,
+  parseUniversalVtt,
+  type CampaignMode,
+  type CampaignView,
+  type Role,
+  type Token,
+} from "@mj-ia/shared";
 import { useEffect, useState } from "react";
 import { api } from "../api";
+import { TokenImagePicker } from "./LibraryPanel";
 import { UsagePanel } from "./UsagePanel";
 
 const MODES: Record<CampaignMode, string> = {
@@ -29,22 +38,103 @@ export function GmPanel({ view, selected, sceneId, onSceneView }: {
   );
 }
 
+/** Taille en pixels d'une image (pour en déduire la grille). */
+function imageSize(src: string) {
+  return new Promise<{ width: number; height: number }>((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
+    img.onerror = () => reject(new Error("Image illisible"));
+    img.src = src;
+  });
+}
+
+function base64ToFile(b64: string, mime: string, name: string) {
+  const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+  return new File([bytes], name, { type: mime });
+}
+
 function ScenesSection({ view, sceneId, onSceneView }: { view: CampaignView; sceneId: string | null; onSceneView: (id: string) => void }) {
   const { campaign } = view;
+  const maps = view.assets.filter((a) => a.kind === "map");
   const [name, setName] = useState("");
+  // Carte choisie : un fichier à envoyer, ou une image déjà dans la bibliothèque.
   const [file, setFile] = useState<File | null>(null);
+  const [libraryUrl, setLibraryUrl] = useState("");
+  const [pixels, setPixels] = useState<{ width: number; height: number } | null>(null);
+  const [perCell, setPerCell] = useState(70);
   const [width, setWidth] = useState(20);
   const [height, setHeight] = useState(15);
+  const [info, setInfo] = useState("");
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  const applyGrid = (px: { width: number; height: number } | null, cell: number) => {
+    if (!px) return;
+    const grid = gridFromImage(px.width, px.height, cell);
+    setWidth(grid.width);
+    setHeight(grid.height);
+  };
+
+  const pickFile = async (f: File | undefined) => {
+    setError("");
+    setInfo("");
+    setLibraryUrl("");
+    if (!f) return setFile(null);
+    try {
+      if (isUniversalVttFile(f.name)) {
+        // Dungeondraft, Dungeon Alchemist… : la grille est dans le fichier.
+        const vtt = parseUniversalVtt(JSON.parse(await f.text()));
+        const ext = vtt.mime.split("/")[1].replace("jpeg", "jpg");
+        const image = base64ToFile(vtt.imageBase64, vtt.mime, f.name.replace(/\.[^.]+$/, `.${ext}`));
+        setFile(image);
+        setPixels(null);
+        setWidth(vtt.width);
+        setHeight(vtt.height);
+        if (vtt.pixelsPerCell) setPerCell(vtt.pixelsPerCell);
+        setInfo(`Fichier VTT : grille de ${vtt.width} × ${vtt.height} cases lue dans le fichier.`);
+      } else {
+        const url = URL.createObjectURL(f);
+        const px = await imageSize(url);
+        URL.revokeObjectURL(url);
+        setFile(f);
+        setPixels(px);
+        applyGrid(px, perCell);
+        setInfo(`Image de ${px.width} × ${px.height} pixels.`);
+      }
+      if (!name.trim()) setName(f.name.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " "));
+    } catch (e) {
+      setFile(null);
+      setError((e as Error).message);
+    }
+  };
+
+  const pickLibrary = async (url: string) => {
+    setFile(null);
+    setLibraryUrl(url);
+    setInfo("");
+    if (!url) return;
+    const asset = maps.find((m) => m.url === url);
+    if (asset && !name.trim()) setName(asset.name);
+    const px = await imageSize(url).catch(() => null);
+    setPixels(px);
+    applyGrid(px, perCell);
+    if (px) setInfo(`Image de ${px.width} × ${px.height} pixels.`);
+  };
 
   const create = async () => {
     setBusy(true);
+    setError("");
     try {
-      const mapUrl = file ? (await api.upload(campaign.id, file)).url : null;
+      const mapUrl = file ? (await api.uploadAsset(campaign.id, "map", file)).url : libraryUrl || null;
       const { id } = await api.post<{ id: string }>(`/campaigns/${campaign.id}/scenes`, { name, mapUrl, width, height });
       setName("");
       setFile(null);
+      setLibraryUrl("");
+      setPixels(null);
+      setInfo("");
       onSceneView(id);
+    } catch (e) {
+      setError((e as Error).message);
     } finally {
       setBusy(false);
     }
@@ -72,14 +162,43 @@ function ScenesSection({ view, sceneId, onSceneView }: { view: CampaignView; sce
         ))}
       </ul>
       <details>
-        <summary>Nouvelle scène</summary>
+        <summary>Nouvelle scène (importer une battle map)</summary>
         <input placeholder="Nom" value={name} onChange={(e) => setName(e.target.value)} />
-        <label>Carte (image)<input type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] ?? null)} /></label>
+        <label>
+          Battle map : image, ou fichier Dungeondraft / Dungeon Alchemist (.dd2vtt, .uvtt)
+          <input type="file" accept="image/*,.dd2vtt,.uvtt,.df2vtt" onChange={(e) => pickFile(e.target.files?.[0])} />
+        </label>
+        {maps.length > 0 && (
+          <label>
+            ou une carte de la bibliothèque
+            <select value={libraryUrl} onChange={(e) => pickLibrary(e.target.value)}>
+              <option value="">—</option>
+              {maps.map((m) => <option key={m.id} value={m.url}>{m.name}</option>)}
+            </select>
+          </label>
+        )}
+        {pixels && (
+          <label>
+            Pixels par case (souvent 70, 100, 140 ou 256 : regarde la description de la carte)
+            <input
+              type="number"
+              min={10}
+              value={perCell}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                setPerCell(v);
+                applyGrid(pixels, v);
+              }}
+            />
+          </label>
+        )}
         <div className="row">
-          <label>Largeur (cases)<input type="number" value={width} onChange={(e) => setWidth(Number(e.target.value))} /></label>
-          <label>Hauteur (cases)<input type="number" value={height} onChange={(e) => setHeight(Number(e.target.value))} /></label>
+          <label>Largeur (cases)<input type="number" min={1} max={200} value={width} onChange={(e) => setWidth(Number(e.target.value))} /></label>
+          <label>Hauteur (cases)<input type="number" min={1} max={200} value={height} onChange={(e) => setHeight(Number(e.target.value))} /></label>
         </div>
-        <button onClick={create} disabled={!name.trim() || busy}>Créer la scène</button>
+        {info && <small className="muted">{info}</small>}
+        {error && <p className="error">{error}</p>}
+        <button onClick={create} disabled={!name.trim() || busy}>{busy ? "Import…" : "Créer la scène"}</button>
       </details>
     </div>
   );
@@ -90,6 +209,7 @@ function NewTokenSection({ view, sceneId }: { view: CampaignView; sceneId: strin
   const [name, setName] = useState("");
   const [color, setColor] = useState("#c0392b");
   const [hidden, setHidden] = useState(false);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
 
   const add = async () => {
     const sheet = view.sheets.find((s) => s.id === sheetId);
@@ -98,6 +218,7 @@ function NewTokenSection({ view, sceneId }: { view: CampaignView; sceneId: strin
       name: name.trim() || sheet?.name || "Jeton",
       color,
       hidden,
+      imageUrl,
       sheetId: sheet?.id ?? null,
       // Un jeton lié à la fiche d'un joueur est contrôlé par ce joueur.
       controlledBy: sheet?.ownerId ? [sheet.ownerId] : [],
@@ -120,6 +241,7 @@ function NewTokenSection({ view, sceneId }: { view: CampaignView; sceneId: strin
           <label>Couleur<input type="color" value={color} onChange={(e) => setColor(e.target.value)} /></label>
           <label className="inline"><input type="checkbox" checked={hidden} onChange={(e) => setHidden(e.target.checked)} /> Caché aux joueurs</label>
         </div>
+        <TokenImagePicker view={view} value={imageUrl} onChange={setImageUrl} />
         <button onClick={add}>Placer sur la carte</button>
       </details>
     </div>
@@ -149,6 +271,7 @@ function TokenEditor({ view, token }: { view: CampaignView; token: Token }) {
         </label>
         <label>Couleur<input type="color" defaultValue={token.color} onBlur={(e) => patch({ color: e.target.value })} /></label>
       </div>
+      <TokenImagePicker view={view} value={token.imageUrl} onChange={(imageUrl) => patch({ imageUrl })} />
       <label className="inline">
         <input type="checkbox" checked={token.hidden} onChange={(e) => patch({ hidden: e.target.checked })} /> Caché aux joueurs
       </label>

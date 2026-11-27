@@ -48,6 +48,7 @@ services:
       - "3001:3001"
     volumes:
       - uploads:/data/uploads
+      - documents:/data/documents
     depends_on:
       db:
         condition: service_healthy
@@ -69,4 +70,5 @@ services:
 volumes:
   pgdata:
   uploads:
+  documents:
   whisper-models:
