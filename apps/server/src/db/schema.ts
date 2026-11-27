@@ -1,4 +1,5 @@
 import { boolean, integer, jsonb, pgTable, primaryKey, real, text, timestamp } from "drizzle-orm/pg-core";
+import type { DiceRoll } from "@mj-ia/shared";
 
 const id = () => text("id").primaryKey().$defaultFn(() => crypto.randomUUID());
 const createdAt = () => timestamp("created_at", { withTimezone: true }).notNull().defaultNow();
@@ -82,6 +83,20 @@ export const journalEntries = pgTable("journal_entries", {
   content: text("content").notNull().default(""),
   gmNotes: text("gm_notes"),
   visibility: text("visibility", { enum: ["gm", "all", "some"] }).notNull().default("gm"),
+  visibleTo: jsonb("visible_to").$type<string[]>().notNull().default([]),
+  createdAt: createdAt(),
+});
+
+export const chatMessages = pgTable("chat_messages", {
+  id: id(),
+  campaignId: text("campaign_id").notNull().references(() => campaigns.id, { onDelete: "cascade" }),
+  authorId: text("author_id").references(() => users.id, { onDelete: "set null" }),
+  speaker: text("speaker").notNull(),
+  kind: text("kind", { enum: ["chat", "roll", "narration", "npc", "ai_hint", "system"] }).notNull(),
+  text: text("text").notNull(),
+  emotion: text("emotion"),
+  roll: jsonb("roll").$type<DiceRoll>(),
+  visibility: text("visibility", { enum: ["gm", "all", "some"] }).notNull().default("all"),
   visibleTo: jsonb("visible_to").$type<string[]>().notNull().default([]),
   createdAt: createdAt(),
 });

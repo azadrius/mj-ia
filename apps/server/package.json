@@ -9,6 +9,7 @@
     "typecheck": "tsc -p ."
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.14.0",
     "@fastify/cookie": "^11.1.5",
     "@fastify/multipart": "^10.1.9",
     "@fastify/static": "^11.0.0",

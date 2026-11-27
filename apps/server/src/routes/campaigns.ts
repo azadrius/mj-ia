@@ -11,7 +11,8 @@ import { requireUser } from "../auth/session";
 import { db } from "../db/client";
 import { loadCampaignData, loadMember } from "../db/load";
 import { campaigns, journalEntries, members, scenes, sheets, tokens } from "../db/schema";
-import { env } from "../env";
+import { aiEnv, env } from "../env";
+import { loadMessagesFor } from "../chat";
 import { broadcastTokens, notifyCampaignChanged } from "../realtime";
 
 const visibility = z.enum(["gm", "all", "some"]);
@@ -139,6 +140,14 @@ export async function campaignRoutes(app: FastifyInstance) {
     if (!data) return reply.code(404).send({ error: "Campagne introuvable" });
     return buildCampaignView(data, ctx.member);
   });
+
+  app.get("/api/campaigns/:id/chat", async (request, reply) => {
+    const ctx = await access(request, reply);
+    if (!ctx) return;
+    return loadMessagesFor(ctx.campaignId, ctx.member);
+  });
+
+  app.get("/api/ai/status", async () => ({ enabled: aiEnv.enabled }));
 
   app.patch("/api/campaigns/:id", async (request, reply) => {
     const ctx = await access(request, reply, { gm: true });

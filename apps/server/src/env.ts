@@ -14,3 +14,10 @@ export const env = {
   uploadDir: process.env.UPLOAD_DIR ?? new URL("../uploads", import.meta.url).pathname,
   isProduction: process.env.NODE_ENV === "production",
 };
+
+/** MJ IA : actif seulement si une clé API Anthropic est configurée. */
+export const aiEnv = {
+  enabled: Boolean(process.env.ANTHROPIC_API_KEY),
+  model: process.env.AI_MODEL ?? "claude-opus-5-5",
+  effort: (process.env.AI_EFFORT ?? "low") as "low" | "medium" | "high" | "xhigh" | "max",
+};

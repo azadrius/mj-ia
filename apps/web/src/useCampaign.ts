@@ -1,4 +1,4 @@
-import type { CampaignView, ClientToServerEvents, ServerToClientEvents, Token } from "@mj-ia/shared";
+import type { CampaignView, ChatMessage, ClientToServerEvents, ServerToClientEvents, Token } from "@mj-ia/shared";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { io, type Socket } from "socket.io-client";
 import { api } from "./api";
@@ -12,6 +12,9 @@ type ClientSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 export function useCampaign(campaignId: string) {
   const [view, setView] = useState<CampaignView | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [aiBusy, setAiBusy] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
   const socketRef = useRef<ClientSocket | null>(null);
 
   const reload = useCallback(async () => {
@@ -23,6 +26,12 @@ export function useCampaign(campaignId: string) {
     }
   }, [campaignId]);
 
+  // Historique du chat, fusionné avec les messages reçus en direct pendant le chargement.
+  const loadChat = useCallback(async () => {
+    const history = await api.get<ChatMessage[]>(`/campaigns/${campaignId}/chat`).catch(() => []);
+    setMessages((live) => mergeMessages(history, live));
+  }, [campaignId]);
+
   useEffect(() => {
     reload();
     const socket: ClientSocket = io({ path: "/socket.io", withCredentials: true });
@@ -31,7 +40,11 @@ export function useCampaign(campaignId: string) {
     socket.on("connect", () => {
       socket.emit("campaign:join", campaignId, (ok) => {
         if (!ok) setError("Accès refusé à cette campagne");
-        else reload(); // rattrape ce qui a pu changer pendant une déconnexion
+        else {
+          // Rattrape ce qui a pu changer pendant une déconnexion.
+          reload();
+          loadChat();
+        }
       });
     });
     socket.on("campaign:changed", reload);
@@ -39,13 +52,18 @@ export function useCampaign(campaignId: string) {
       setView((v) => v && { ...v, tokens: [...v.tokens.filter((t) => t.id !== token.id), token] }),
     );
     socket.on("token:remove", (id) => setView((v) => v && { ...v, tokens: v.tokens.filter((t) => t.id !== id) }));
-    socket.on("error", (message) => console.warn(message));
+    socket.on("chat:message", (m) => setMessages((list) => mergeMessages(list, [m])));
+    socket.on("ai:busy", setAiBusy);
+    socket.on("error", (message) => {
+      setNotice(message);
+      setTimeout(() => setNotice(null), 5000);
+    });
 
     return () => {
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [campaignId, reload]);
+  }, [campaignId, reload, loadChat]);
 
   const moveToken = useCallback((tokenId: string, x: number, y: number) => {
     // Mise à jour immédiate à l'écran, le serveur confirme ou corrige.
@@ -53,5 +71,13 @@ export function useCampaign(campaignId: string) {
     socketRef.current?.emit("token:move", { tokenId, x, y });
   }, []);
 
-  return { view, error, reload, moveToken };
+  const sendChat = useCallback((text: string) => socketRef.current?.emit("chat:send", text), []);
+
+  return { view, error, reload, moveToken, messages, sendChat, aiBusy, notice };
+}
+
+function mergeMessages(a: ChatMessage[], b: ChatMessage[]) {
+  const byId = new Map<string, ChatMessage>();
+  for (const m of [...a, ...b]) byId.set(m.id, m);
+  return [...byId.values()].sort((x, y) => x.createdAt.localeCompare(y.createdAt)).slice(-200);
 }

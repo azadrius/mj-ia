@@ -66,10 +66,43 @@ Toute la logique est dans `packages/shared/src/permissions.ts`, testée dans `pe
 
 Le filtrage se fait **côté serveur** avant chaque envoi, en REST comme en temps réel : un joueur ne reçoit jamais une donnée qu'il n'a pas le droit de voir.
 
+## Le MJ IA (étape 2)
+
+L'IA s'active avec `ANTHROPIC_API_KEY` dans `.env` (clé à créer sur https://console.anthropic.com). Sans clé, la table fonctionne normalement et l'IA prévient le MJ qu'elle n'est pas configurée.
+
+Le mode se choisit dans le panneau MJ :
+
+| Mode | Ce que fait l'IA |
+| --- | --- |
+| MJ humain | Rien à la table. Le MJ peut lui demander un conseil privé avec `/ia`. |
+| MJ humain + IA assistante | Pareil : `/ia` donne des conseils que seul le MJ voit. |
+| MJ IA autonome | L'IA répond à chaque action des joueurs : narration, PNJ, jets, jetons, PV, journal. Le MJ humain peut lui glisser une consigne privée avec `/ia`, et un joueur peut lui écrire en privé avec `/mj`. |
+
+### Commandes du chat
+
+| Commande | Effet |
+| --- | --- |
+| `/r 1d20+5` | Jet de dés public (`2d20kh1` avantage, `2d20kl1` désavantage) |
+| `/gr 1d20` | Jet secret, visible du MJ seulement |
+| `/w Nom texte` | Chuchoter à un membre |
+| `/mj texte` | Message privé au MJ (ou au MJ IA) |
+| `/ia texte` | MJ : consigne ou question à l'IA |
+
+### Comment l'IA agit
+
+Le code est dans `apps/server/src/ai/`. À chaque tour, l'IA reçoit la campagne complète vue par le MJ (`context.ts`) et le chat récent, puis agit uniquement avec des outils (`tools.ts`) :
+
+- `say` : une réplique du narrateur ou d'un PNJ, avec une **émotion** (pour la voix de l'étape 3), publique ou privée ;
+- `roll_dice`, `move_token`, `set_token_hidden`, `update_hp`, `write_journal`, `set_active_scene`.
+
+Le texte qu'elle écrit hors des outils n'est jamais montré aux joueurs. Garde-fou : `say` refuse un texte qui recopie un secret du MJ, et demande à l'IA de reformuler.
+
+Variables : `AI_MODEL` (par défaut `claude-opus-5-5` ; `claude-haiku-5-5` coûte beaucoup moins cher) et `AI_EFFORT` (`low` par défaut pour répondre vite).
+
 ## Commandes utiles
 
 ```bash
-npm test             # tests (permissions)
+npm test             # tests (permissions, dés, chat, contexte de l'IA)
 npm run typecheck    # vérification TypeScript de tous les paquets
 npm run db:generate  # génère une migration après modification de apps/server/src/db/schema.ts
 ```
