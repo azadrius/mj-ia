@@ -1,24 +1,22 @@
 import { isGm, type Token } from "@mj-ia/shared";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { ChatPanel } from "../components/ChatPanel";
 import { GmPanel } from "../components/GmPanel";
 import { JournalPanel } from "../components/JournalPanel";
 import { MapCanvas } from "../components/MapCanvas";
 import { SheetsPanel } from "../components/SheetsPanel";
 import { useCampaign } from "../useCampaign";
 
-type Tab = "gm" | "sheets" | "journal";
+type Tab = "chat" | "gm" | "sheets" | "journal";
 
 export function TablePage({ campaignId }: { campaignId: string }) {
-  const { view, error, moveToken } = useCampaign(campaignId);
+  const { view, error, moveToken, messages, sendChat, aiBusy, notice } = useCampaign(campaignId);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [openSheetId, setOpenSheetId] = useState<string | null>(null);
   const [gmSceneId, setGmSceneId] = useState<string | null>(null);
-  const [tab, setTab] = useState<Tab>("sheets");
+  const [tab, setTab] = useState<Tab>("chat");
 
   const gm = view ? isGm(view.me) : false;
-  useEffect(() => {
-    if (gm) setTab("gm");
-  }, [gm]);
 
   if (error) return <div className="center"><p>{error}</p><a href="#/">← Mes campagnes</a></div>;
   if (!view) return <div className="center">Chargement…</div>;
@@ -66,11 +64,14 @@ export function TablePage({ campaignId }: { campaignId: string }) {
         )}
         <aside>
           <nav className="tabs">
+            <button className={tab === "chat" ? "on" : ""} onClick={() => setTab("chat")}>Chat</button>
             {gm && <button className={tab === "gm" ? "on" : ""} onClick={() => setTab("gm")}>MJ</button>}
             <button className={tab === "sheets" ? "on" : ""} onClick={() => setTab("sheets")}>Fiches</button>
             <button className={tab === "journal" ? "on" : ""} onClick={() => setTab("journal")}>Journal</button>
           </nav>
-          <div className="aside-body">
+          {notice && <div className="notice">{notice}</div>}
+          {tab === "chat" && <ChatPanel view={view} messages={messages} aiBusy={aiBusy} onSend={sendChat} />}
+          <div className="aside-body" hidden={tab === "chat"}>
             {tab === "gm" && gm && (
               <GmPanel view={view} selected={selected} sceneId={sceneId} onSceneView={setGmSceneId} />
             )}

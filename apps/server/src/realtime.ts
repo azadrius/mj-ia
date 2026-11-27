@@ -8,6 +8,7 @@ import {
 import { eq } from "drizzle-orm";
 import { Server, type Socket } from "socket.io";
 import { userFromSessionId, SESSION_COOKIE } from "./auth/session";
+import { handleChatInput } from "./chat";
 import { db } from "./db/client";
 import { loadCampaignData, loadMember, toToken } from "./db/load";
 import { scenes, tokens } from "./db/schema";
@@ -49,6 +50,17 @@ export function setupRealtime(server: HttpServer) {
       socket.data.campaignId = campaignId;
       socket.join(room(campaignId));
       ack(true);
+    });
+
+    socket.on("chat:send", async (text) => {
+      const campaignId = socket.data.campaignId;
+      if (!campaignId || typeof text !== "string") return;
+      try {
+        const me = await loadMember(campaignId, socket.data.userId);
+        if (me) await handleChatInput(campaignId, me, text);
+      } catch (e) {
+        socket.emit("error", (e as Error).message);
+      }
     });
 
     socket.on("token:move", async ({ tokenId, x, y }) => {
@@ -106,4 +118,15 @@ export async function broadcastTokens(campaignId: string, tokenIds: string[]) {
 /** Signale un changement : chaque client recharge sa vue filtrée. */
 export function notifyCampaignChanged(campaignId: string) {
   io?.to(room(campaignId)).emit("campaign:changed");
+}
+
+/** Sockets connectés à une campagne. */
+export async function campaignSockets(campaignId: string) {
+  if (!io) return [];
+  return io.in(room(campaignId)).fetchSockets();
+}
+
+/** Indique à la table que l'IA réfléchit. */
+export function emitAiBusy(campaignId: string, busy: boolean) {
+  io?.to(room(campaignId)).emit("ai:busy", busy);
 }

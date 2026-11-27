@@ -33,7 +33,7 @@ export async function buildApp() {
   // En production, le serveur sert aussi la webapp compilée.
   const webDist = new URL("../../web/dist", import.meta.url).pathname;
   if (existsSync(webDist)) {
-    await app.register(fastifyStatic, { root: webDist, prefix: "/", wildcard: false });
+    await app.register(fastifyStatic, { root: webDist, prefix: "/" });
     app.setNotFoundHandler((request, reply) => {
       if (request.url.startsWith("/api/")) return reply.code(404).send({ error: "Introuvable" });
       return reply.sendFile("index.html");

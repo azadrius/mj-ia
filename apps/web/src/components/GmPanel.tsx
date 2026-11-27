@@ -186,7 +186,13 @@ function MembersSection({ view }: { view: CampaignView }) {
           {Object.entries(MODES).map(([k, label]) => <option key={k} value={k}>{label}</option>)}
         </select>
       </label>
-      <small className="muted">Les modes IA arriveront à l'étape 2.</small>
+      <small className="muted">
+        {campaign.mode === "ai_gm"
+          ? "L'IA mène la partie et répond aux joueurs. Tape /ia dans le chat pour lui donner une consigne privée."
+          : campaign.mode === "ai_assistant"
+            ? "Tape /ia dans le chat pour demander un conseil privé à l'IA."
+            : "Pas d'IA à la table (/ia reste disponible pour toi)."}
+      </small>
       <label>
         Lien d'invitation
         <input readOnly value={inviteLink} onFocus={(e) => e.target.select()} />
