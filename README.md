@@ -112,6 +112,10 @@ Les répliques de l'IA (narration et PNJ) sont lues à voix haute avec **Piper**
 
 Chaque réplique lue est comptée en caractères (narration et PNJ séparés), même avec Piper. Chaque appel à l'IA est compté en tokens. Le panneau MJ > **Consommation** affiche les 30 derniers jours par séance, le coût IA estimé, et l'offre ElevenLabs qui suffirait.
 
+## Le bot Discord
+
+Le bot lit les répliques dans votre salon vocal et relie un salon textuel au chat de la table. Installation pas à pas : [docs/bot-discord.md](docs/bot-discord.md). Il démarre avec le serveur dès que `DISCORD_BOT_TOKEN` est renseigné.
+
 ## Commandes utiles
 
 ```bash

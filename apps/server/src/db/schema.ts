@@ -25,6 +25,10 @@ export const campaigns = pgTable("campaigns", {
   mode: text("mode", { enum: ["ai_gm", "ai_assistant", "human"] }).notNull().default("human"),
   inviteCode: text("invite_code").notNull().unique(),
   activeSceneId: text("active_scene_id"),
+  /** Serveur et salons Discord liés à la campagne (bot). */
+  discordGuildId: text("discord_guild_id"),
+  discordTextChannelId: text("discord_text_channel_id"),
+  discordVoiceChannelId: text("discord_voice_channel_id"),
   createdAt: createdAt(),
 });
 

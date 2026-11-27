@@ -22,6 +22,13 @@
       "when": 1795788869455,
       "tag": "0002_voix_mesure",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1795789401955,
+      "tag": "0003_discord",
+      "breakpoints": true
     }
   ]
 }

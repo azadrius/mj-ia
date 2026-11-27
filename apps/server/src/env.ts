@@ -30,3 +30,8 @@ export const ttsEnv = {
   /** Les modèles à très nombreux locuteurs (ex. mls) sont limités pour garder des voix variées. */
   maxSpeakersPerModel: Number(process.env.PIPER_MAX_SPEAKERS ?? 20),
 };
+
+/** Bot Discord : actif seulement si un jeton de bot est configuré. */
+export const discordEnv = {
+  botToken: process.env.DISCORD_BOT_TOKEN ?? "",
+};
