@@ -1,0 +1,41 @@
+# Déploiement automatique sur la VM à chaque fusion dans main.
+# À configurer une fois dans GitHub > Settings > Secrets and variables > Actions :
+#   VM_HOST     : adresse IP publique de la VM
+#   VM_USER     : utilisateur SSH (ubuntu)
+#   VM_SSH_KEY  : clé privée SSH de la VM (contenu complet du fichier .key)
+# Sans ces secrets, le déploiement est simplement ignoré.
+name: Déployer sur la VM
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-vm
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      VM_HOST: ${{ secrets.VM_HOST }}
+      VM_USER: ${{ secrets.VM_USER }}
+      VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
+    steps:
+      - name: Vérifier la configuration
+        id: check
+        run: |
+          if [ -z "$VM_HOST" ] || [ -z "$VM_SSH_KEY" ]; then
+            echo "Secrets VM_HOST / VM_SSH_KEY absents : pas de déploiement."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Mettre à jour la VM
+        if: steps.check.outputs.skip != 'true'
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$VM_SSH_KEY" > ~/.ssh/vm.key
+          chmod 600 ~/.ssh/vm.key
+          ssh-keyscan -H "$VM_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          ssh -i ~/.ssh/vm.key "${VM_USER:-ubuntu}@$VM_HOST" 'cd ~/mj-ia && bash scripts/update-vm.sh'
