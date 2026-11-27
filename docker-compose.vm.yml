@@ -1,0 +1,41 @@
+# Hébergement sur une VM (Oracle Cloud Always Free, processeur ARM, sans carte graphique).
+#   docker compose -f docker-compose.yml -f docker-compose.vm.yml --profile app up -d --build
+# Seuls les ports 80 et 443 (Caddy, HTTPS automatique) sont ouverts sur Internet.
+services:
+  db:
+    environment:
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD manquant dans .env}
+    ports: !reset []
+
+  piper:
+    ports: !reset []
+
+  whisper:
+    environment:
+      # Sur 4 cœurs ARM : small ≈ 2 à 4 s par phrase, base ≈ 1 s mais moins précis en français.
+      WHISPER_MODEL: ${WHISPER_MODEL:-small}
+      WHISPER_THREADS: ${WHISPER_THREADS:-4}
+    ports: !reset []
+
+  app:
+    environment:
+      DATABASE_URL: postgres://mjia:${DB_PASSWORD}@db:5432/mjia
+      APP_URL: https://${DOMAIN:?DOMAIN manquant dans .env}
+    ports: !reset []
+
+  caddy:
+    image: caddy:2.8
+    profiles: ["app"]
+    env_file: .env
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+    depends_on:
+      - app
+    restart: unless-stopped
+
+volumes:
+  caddy-data:

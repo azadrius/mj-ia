@@ -12,9 +12,11 @@ from flask import Flask, jsonify, request
 MODEL = os.environ.get("WHISPER_MODEL", "small")
 DEVICE = os.environ.get("WHISPER_DEVICE", "cpu")
 COMPUTE = os.environ.get("WHISPER_COMPUTE_TYPE", "int8")
+# Nombre de cœurs pour le processeur (0 = choix automatique).
+THREADS = int(os.environ.get("WHISPER_THREADS", "0"))
 
 app = Flask(__name__)
-model = WhisperModel(MODEL, device=DEVICE, compute_type=COMPUTE)
+model = WhisperModel(MODEL, device=DEVICE, compute_type=COMPUTE, cpu_threads=THREADS)
 
 
 @app.get("/health")

@@ -9,14 +9,12 @@ Une table de jeu de rôle en ligne avec un maître du jeu IA, pensée pour jouer
 3. **Voix sur Discord** : le bot écoute les joueurs et fait parler chaque PNJ avec sa voix et ses émotions.
 4. **Finitions** : brouillard de guerre, initiative, autres systèmes de JDR.
 
-## Installer sur ton PC (tout gratuit sauf l'IA)
+## Héberger la table
 
-Guide pas à pas pour Windows 11 avec une carte NVIDIA : [docs/installation-pc.md](docs/installation-pc.md). En résumé :
+- **Sur une VM gratuite Oracle Cloud (recommandé)** : la table reste en ligne sans ton PC, avec HTTPS et une adresse fixe. Guide : [docs/installation-vm.md](docs/installation-vm.md). En résumé, sur la VM : `bash scripts/install-vm.sh`. Les mises à jour peuvent se déployer automatiquement à chaque fusion dans main.
+- **Sur ton PC Windows** (avec la carte NVIDIA pour Whisper) : [docs/installation-pc.md](docs/installation-pc.md).
 
-```bash
-cp .env.example .env
-docker compose -f docker-compose.yml -f docker-compose.gpu.yml --profile app up -d --build
-```
+Dans les deux cas, seule l'API Claude (le MJ IA) est payante.
 
 ## Développer en local
 
