@@ -130,6 +130,7 @@ L'onglet **Biblio** de la table rassemble les fichiers de la campagne.
 - **Documents** (livre de règles en PDF, aides de jeu, lettres…) : privés à l'import, puis le MJ choisit qui peut les lire (tous ou certains joueurs). Ils ne sont jamais servis en accès libre : chaque lecture vérifie les droits.
 
 Les règles officielles de D&D Beyond ou Demiplane ne peuvent pas être importées automatiquement (pas d'API, conditions d'utilisation). Chacun peut en revanche importer ses propres PDF pour sa table.
+
 ## Scénario de test
 
 Sur la page des campagnes, **Scénarios de test** crée en un clic « Le moulin de Brumevent » : une aventure d'environ une heure pour un guerrier de niveau 2 (Joran, prétiré), avec deux cartes, quatre PNJ aux émotions variées (pour tester les voix), des gobelins cachés et des secrets dans le journal.
