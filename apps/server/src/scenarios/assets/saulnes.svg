@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="840" viewBox="0 0 1120 840">
+  <rect width="1120" height="840" fill="#5d7a3e"/>
+  <g fill="#6b8a47" opacity="0.6">
+    <circle cx="80" cy="90" r="60"/><circle cx="1040" cy="760" r="80"/><circle cx="200" cy="740" r="50"/><circle cx="960" cy="110" r="45"/>
+  </g>
+  <!-- routes -->
+  <path d="M0 560 H1120" stroke="#a88c5f" stroke-width="90"/>
+  <path d="M560 0 V840" stroke="#a88c5f" stroke-width="70"/>
+  <path d="M760 560 C 900 560 960 450 1120 420" stroke="#a88c5f" stroke-width="60" fill="none"/>
+  <!-- place -->
+  <circle cx="630" cy="490" r="150" fill="#b49a6c"/>
+  <circle cx="700" cy="420" r="38" fill="#6e6e6e" stroke="#444" stroke-width="8"/>
+  <circle cx="700" cy="420" r="22" fill="#2a4b6b"/>
+  <!-- auberge -->
+  <rect x="210" y="150" width="280" height="210" fill="#7a4f2a" stroke="#3b2513" stroke-width="10"/>
+  <rect x="330" y="340" width="50" height="30" fill="#3b2513"/>
+  <text x="350" y="265" font-family="Georgia, serif" font-size="30" fill="#f4e6c8" text-anchor="middle">Auberge du</text>
+  <text x="350" y="300" font-family="Georgia, serif" font-size="30" fill="#f4e6c8" text-anchor="middle">Chaudron</text>
+  <!-- maisons -->
+  <rect x="770" y="160" width="160" height="130" fill="#8a6a45" stroke="#3b2513" stroke-width="8"/>
+  <rect x="140" y="640" width="170" height="120" fill="#8a6a45" stroke="#3b2513" stroke-width="8"/>
+  <rect x="760" y="650" width="150" height="120" fill="#8a6a45" stroke="#3b2513" stroke-width="8"/>
+  <!-- vers le moulin -->
+  <text x="1100" y="380" font-family="Georgia, serif" font-size="26" fill="#f4e6c8" text-anchor="end">vers le moulin →</text>
+  <text x="560" y="820" font-family="Georgia, serif" font-size="34" fill="#f4e6c8" text-anchor="middle" opacity="0.85">Saulnes</text>
+</svg>

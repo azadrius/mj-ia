@@ -4,7 +4,7 @@ import { mkdir, unlink } from "node:fs/promises";
 import { extname, join } from "node:path";
 import { pipeline } from "node:stream/promises";
 import { buildCampaignView, canEditSheet, getSystem, isGm, type Member, type User } from "@mj-ia/shared";
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { requireUser } from "../auth/session";
@@ -14,6 +14,8 @@ import { campaigns, journalEntries, members, scenes, sheets, tokens } from "../d
 import { aiEnv, env } from "../env";
 import { loadMessagesFor } from "../chat";
 import { usageReport } from "../usage";
+import { createFromScenario } from "../scenarios/load";
+import { SCENARIOS } from "../scenarios/moulin";
 import { broadcastTokens, notifyCampaignChanged } from "../realtime";
 
 const visibility = z.enum(["gm", "all", "some"]);
@@ -58,6 +60,15 @@ const journalInput = z.object({
   visibility: visibility.default("gm"),
   visibleTo: idList.default([]),
 });
+
+/** Un nouveau joueur reçoit un personnage prétiré libre (fiche de PJ sans propriétaire), avec ses jetons. */
+async function claimPregen(campaignId: string, userId: string) {
+  const free = await db.select().from(sheets).where(and(eq(sheets.campaignId, campaignId), isNull(sheets.ownerId)));
+  const pregen = free.find((s) => (s.data as { kind?: string }).kind === "pc");
+  if (!pregen) return;
+  await db.update(sheets).set({ ownerId: userId }).where(eq(sheets.id, pregen.id));
+  await db.update(tokens).set({ controlledBy: [userId] }).where(eq(tokens.sheetId, pregen.id));
+}
 
 const newInviteCode = () => randomBytes(6).toString("base64url");
 
@@ -123,13 +134,29 @@ export async function campaignRoutes(app: FastifyInstance) {
     return { id: campaign.id };
   });
 
+  // Scénarios prêts à jouer (tests).
+  app.get("/api/scenarios", async () => Object.values(SCENARIOS).map(({ id, name, summary }) => ({ id, name, summary })));
+
+  app.post("/api/campaigns/scenario", async (request, reply) => {
+    const user = await requireUser(request, reply);
+    if (!user) return;
+    const { scenario, as } = z.object({ scenario: z.string(), as: z.enum(["player", "gm"]) }).parse(request.body);
+    if (!SCENARIOS[scenario]) return reply.code(404).send({ error: "Scénario inconnu" });
+    return { id: await createFromScenario(scenario, user.id, as) };
+  });
+
   app.post("/api/campaigns/join", async (request, reply) => {
     const user = await requireUser(request, reply);
     if (!user) return;
     const { code } = z.object({ code: z.string().trim().min(1) }).parse(request.body);
     const [campaign] = await db.select().from(campaigns).where(eq(campaigns.inviteCode, code));
     if (!campaign) return reply.code(404).send({ error: "Code d'invitation invalide" });
-    await db.insert(members).values({ campaignId: campaign.id, userId: user.id, role: "player" }).onConflictDoNothing();
+    const added = await db
+      .insert(members)
+      .values({ campaignId: campaign.id, userId: user.id, role: "player" })
+      .onConflictDoNothing()
+      .returning();
+    if (added.length) await claimPregen(campaign.id, user.id);
     notifyCampaignChanged(campaign.id);
     return { id: campaign.id };
   });

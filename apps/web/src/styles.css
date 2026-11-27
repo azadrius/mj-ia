@@ -125,3 +125,6 @@ table.usage th:first-child, table.usage td:first-child { text-align: left; }
 label.upload { cursor: pointer; }
 .asset-row .panel-head { justify-content: flex-start; gap: 8px; width: 100%; }
 .asset-row .panel-head a { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
+.scenario { border: 1px solid var(--border, #444); border-radius: 8px; padding: 12px; margin-top: 8px; }
+.scenario p { margin: 4px 0 10px; }
+button.secondary { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
