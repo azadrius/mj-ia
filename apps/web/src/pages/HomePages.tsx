@@ -59,6 +59,17 @@ export function CampaignsPage({ user, onLogout }: { user: User; onLogout: () => 
   }, []);
 
   const go = (id: string) => (location.hash = `#/c/${id}`);
+  const [scenarios, setScenarios] = useState<{ id: string; name: string; summary: string }[]>([]);
+  useEffect(() => {
+    api.get<{ id: string; name: string; summary: string }[]>("/scenarios").then(setScenarios).catch(() => {});
+  }, []);
+  const fromScenario = async (scenario: string, as: "player" | "gm") => {
+    try {
+      go((await api.post<{ id: string }>("/campaigns/scenario", { scenario, as })).id);
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
   const create = async () => go((await api.post<{ id: string }>("/campaigns", { name, system })).id);
   const join = async () => {
     try {
@@ -99,6 +110,21 @@ export function CampaignsPage({ user, onLogout }: { user: User; onLogout: () => 
           {error && <p className="error">{error}</p>}
         </form>
       </div>
+      {scenarios.length > 0 && (
+        <div>
+          <h3>Scénarios de test</h3>
+          {scenarios.map((s) => (
+            <div key={s.id} className="scenario">
+              <strong>{s.name}</strong>
+              <p className="muted">{s.summary}</p>
+              <div className="row">
+                <button onClick={() => fromScenario(s.id, "player")}>Jouer seul avec le MJ IA</button>
+                <button className="secondary" onClick={() => fromScenario(s.id, "gm")}>Je suis MJ, un ami joue</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

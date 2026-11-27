@@ -121,6 +121,15 @@ Les répliques de l'IA (narration et PNJ) sont lues à voix haute avec **Piper**
 
 Chaque réplique lue est comptée en caractères (narration et PNJ séparés), même avec Piper. Chaque appel à l'IA est compté en tokens. Le panneau MJ > **Consommation** affiche les 30 derniers jours par séance, le coût IA estimé, et l'offre ElevenLabs qui suffirait.
 
+## Scénario de test
+
+Sur la page des campagnes, **Scénarios de test** crée en un clic « Le moulin de Brumevent » : une aventure d'environ une heure pour un guerrier de niveau 2 (Joran, prétiré), avec deux cartes, quatre PNJ aux émotions variées (pour tester les voix), des gobelins cachés et des secrets dans le journal.
+
+- **Jouer seul avec le MJ IA** : tu joues Joran, l'IA mène tout.
+- **Je suis MJ, un ami joue** : tu vois tout ; le premier joueur qui rejoint avec le lien d'invitation reçoit Joran.
+
+Écris « Je suis prêt » dans le chat pour lancer la partie. Le scénario est défini dans `apps/server/src/scenarios/moulin.ts`.
+
 ## Le bot Discord
 
 Le bot lit les répliques dans votre salon vocal et relie un salon textuel au chat de la table. Avec `/mj ecouter`, il écoute aussi les joueurs : **Whisper** (gratuit, local, `docker/whisper`) transcrit chaque phrase, qui part au chat de la table, et le MJ IA répond à voix haute. Installation pas à pas : [docs/bot-discord.md](docs/bot-discord.md). Il démarre avec le serveur dès que `DISCORD_BOT_TOKEN` est renseigné.
