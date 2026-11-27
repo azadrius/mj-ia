@@ -121,6 +121,16 @@ Les répliques de l'IA (narration et PNJ) sont lues à voix haute avec **Piper**
 
 Chaque réplique lue est comptée en caractères (narration et PNJ séparés), même avec Piper. Chaque appel à l'IA est compté en tokens. Le panneau MJ > **Consommation** affiche les 30 derniers jours par séance, le coût IA estimé, et l'offre ElevenLabs qui suffirait.
 
+## Bibliothèque : battle maps, jetons, documents
+
+L'onglet **Biblio** de la table rassemble les fichiers de la campagne.
+
+- **Battle maps** : dans MJ > Scènes > Nouvelle scène, importe une image ou un fichier **Universal VTT** (`.dd2vtt` de Dungeondraft, `.uvtt` de Dungeon Alchemist…). Pour une image, indique le nombre de pixels par case et la grille est calculée ; pour un fichier VTT, la grille est lue dans le fichier.
+- **Images de jetons** : le MJ importe plusieurs images à la fois et les choisit en plaçant ou en modifiant un jeton. Un joueur peut importer son portrait et le mettre sur son propre jeton.
+- **Documents** (livre de règles en PDF, aides de jeu, lettres…) : privés à l'import, puis le MJ choisit qui peut les lire (tous ou certains joueurs). Ils ne sont jamais servis en accès libre : chaque lecture vérifie les droits.
+
+Les règles officielles de D&D Beyond ou Demiplane ne peuvent pas être importées automatiquement (pas d'API, conditions d'utilisation). Chacun peut en revanche importer ses propres PDF pour sa table.
+
 ## Scénario de test
 
 Sur la page des campagnes, **Scénarios de test** crée en un clic « Le moulin de Brumevent » : une aventure d'environ une heure pour un guerrier de niveau 2 (Joran, prétiré), avec deux cartes, quatre PNJ aux émotions variées (pour tester les voix), des gobelins cachés et des secrets dans le journal.

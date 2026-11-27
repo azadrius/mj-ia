@@ -72,10 +72,10 @@ async function claimPregen(campaignId: string, userId: string) {
 
 const newInviteCode = () => randomBytes(6).toString("base64url");
 
-type Ctx = { user: User; member: Member; campaignId: string };
+export type Ctx = { user: User; member: Member; campaignId: string };
 
 /** Vérifie que l'utilisateur est membre (et MJ si demandé) de la campagne de l'URL. */
-async function access(request: FastifyRequest, reply: FastifyReply, opts: { gm?: boolean } = {}): Promise<Ctx | null> {
+export async function access(request: FastifyRequest, reply: FastifyReply, opts: { gm?: boolean } = {}): Promise<Ctx | null> {
   const user = await requireUser(request, reply);
   if (!user) return null;
   const { id: campaignId } = request.params as { id: string };
@@ -96,7 +96,7 @@ async function sceneInCampaign(sceneId: string, campaignId: string) {
   return scene ?? null;
 }
 
-async function tokenInCampaign(tokenId: string, campaignId: string) {
+export async function tokenInCampaign(tokenId: string, campaignId: string) {
   const [row] = await db
     .select({ token: tokens })
     .from(tokens)
@@ -404,9 +404,9 @@ export async function campaignRoutes(app: FastifyInstance) {
     await mkdir(dir, { recursive: true });
     const name = `${randomBytes(12).toString("hex")}${ext}`;
     await pipeline(file.file, createWriteStream(join(dir, name)));
-    if (file.file.truncated) {
+    if (file.file.truncated || file.file.bytesRead > 30 * 1024 * 1024) {
       await unlink(join(dir, name));
-      return reply.code(413).send({ error: "Image trop lourde (20 Mo max)" });
+      return reply.code(413).send({ error: "Image trop lourde (30 Mo max)" });
     }
     return { url: `/uploads/${ctx.campaignId}/${name}` };
   });

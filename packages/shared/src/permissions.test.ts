@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { buildCampaignView, canMoveToken } from "./permissions";
-import type { CampaignData, Member, Token } from "./types";
+import { buildCampaignView, canManageAsset, canMoveToken } from "./permissions";
+import type { Asset, CampaignData, Member, Token } from "./types";
 
 const gm: Member = { userId: "gm", name: "MJ", avatarUrl: null, role: "gm" };
 const alice: Member = { userId: "alice", name: "Alice", avatarUrl: null, role: "player" };
@@ -10,6 +10,11 @@ const spectator: Member = { userId: "spec", name: "Spec", avatarUrl: null, role:
 const token = (t: Partial<Token>): Token => ({
   id: "t", sceneId: "s1", name: "", x: 0, y: 0, size: 1, color: "#000",
   imageUrl: null, sheetId: null, controlledBy: [], hidden: false, ...t,
+});
+
+const asset = (a: Partial<Asset>): Asset => ({
+  id: "a", campaignId: "c", kind: "document", name: "", url: "", mime: "application/pdf", size: 1,
+  uploadedBy: "gm", visibility: "gm", visibleTo: [], ...a,
 });
 
 const data: CampaignData = {
@@ -35,6 +40,13 @@ const data: CampaignData = {
     { id: "j-public", campaignId: "c", kind: "place", title: "Village", content: "Calme", gmNotes: "Le maire est un vampire", visibility: "all", visibleTo: [] },
     { id: "j-secret", campaignId: "c", kind: "note", title: "Plan du méchant", content: "…", gmNotes: "…", visibility: "gm", visibleTo: [] },
     { id: "j-bob", campaignId: "c", kind: "handout", title: "Lettre pour Bob", content: "…", gmNotes: null, visibility: "some", visibleTo: ["bob"] },
+  ],
+  assets: [
+    asset({ id: "a-rules", kind: "document", visibility: "all" }),
+    asset({ id: "a-adventure", kind: "document" }),
+    asset({ id: "a-bob-letter", kind: "document", visibility: "some", visibleTo: ["bob"] }),
+    asset({ id: "a-dragon-map", kind: "map" }),
+    asset({ id: "a-alice-portrait", kind: "token", uploadedBy: "alice" }),
   ],
 };
 
@@ -88,5 +100,26 @@ describe("déplacement des jetons", () => {
     expect(canMoveToken(pc, alice)).toBe(true);
     expect(canMoveToken(pc, bob)).toBe(false);
     expect(canMoveToken(token({ controlledBy: ["spec"] }), spectator)).toBe(false);
+  });
+});
+
+describe("bibliothèque", () => {
+  it("le MJ voit tous les fichiers", () => {
+    expect(buildCampaignView(data, gm).assets).toHaveLength(5);
+  });
+
+  it("un joueur voit les documents partagés et ses propres images", () => {
+    expect(ids(buildCampaignView(data, alice).assets)).toEqual(["a-alice-portrait", "a-rules"]);
+    expect(ids(buildCampaignView(data, bob).assets)).toEqual(["a-bob-letter", "a-rules"]);
+    expect(buildCampaignView(data, bob).assets.every((a) => a.visibleTo.length === 0)).toBe(true);
+  });
+
+  it("un joueur ne gère que ce qu'il a envoyé", () => {
+    const portrait = data.assets.find((a) => a.id === "a-alice-portrait")!;
+    const rules = data.assets.find((a) => a.id === "a-rules")!;
+    expect(canManageAsset(portrait, alice)).toBe(true);
+    expect(canManageAsset(portrait, bob)).toBe(false);
+    expect(canManageAsset(rules, alice)).toBe(false);
+    expect(canManageAsset(rules, gm)).toBe(true);
   });
 });

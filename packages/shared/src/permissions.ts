@@ -1,4 +1,5 @@
 import type {
+  Asset,
   CampaignData,
   CampaignView,
   JournalEntry,
@@ -32,6 +33,16 @@ export function canEditSheet(sheet: Sheet, me: Member) {
 
 export function canSeeJournal(entry: JournalEntry, me: Member) {
   return visibleBy(entry, me);
+}
+
+/** Un fichier de la bibliothèque se voit selon sa visibilité ; on voit toujours ce qu'on a envoyé soi-même. */
+export function canSeeAsset(asset: Asset, me: Member) {
+  return visibleBy(asset, me) || asset.uploadedBy === me.userId;
+}
+
+/** Le MJ gère toute la bibliothèque ; un joueur ne gère que ce qu'il a envoyé. */
+export function canManageAsset(asset: Asset, me: Member) {
+  return isGm(me) || (me.role === "player" && asset.uploadedBy === me.userId);
 }
 
 /** Les joueurs ne voient que la scène active ; le MJ voit toutes les scènes. */
@@ -90,5 +101,6 @@ export function buildCampaignView(data: CampaignData, me: Member): CampaignView 
     // Les listes de visibilité ne regardent que le MJ.
     sheets: gm ? sheets : sheets.map((s) => ({ ...s, visibleTo: [] })),
     journal: gm ? journal : journal.map((j) => ({ ...j, visibleTo: [] })),
+    assets: data.assets.filter((a) => canSeeAsset(a, me)).map((a) => (gm ? a : { ...a, visibleTo: [] })),
   };
 }

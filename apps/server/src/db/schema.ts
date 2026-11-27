@@ -91,6 +91,22 @@ export const journalEntries = pgTable("journal_entries", {
   createdAt: createdAt(),
 });
 
+/** Bibliothèque de la campagne : battle maps, images de jetons, documents (règles, aides de jeu). */
+export const assets = pgTable("assets", {
+  id: id(),
+  campaignId: text("campaign_id").notNull().references(() => campaigns.id, { onDelete: "cascade" }),
+  kind: text("kind", { enum: ["map", "token", "document"] }).notNull(),
+  name: text("name").notNull(),
+  /** Chemin du fichier, relatif au dossier de la campagne. */
+  file: text("file").notNull(),
+  mime: text("mime").notNull(),
+  size: integer("size").notNull().default(0),
+  uploadedBy: text("uploaded_by").references(() => users.id, { onDelete: "set null" }),
+  visibility: text("visibility", { enum: ["gm", "all", "some"] }).notNull().default("gm"),
+  visibleTo: jsonb("visible_to").$type<string[]>().notNull().default([]),
+  createdAt: createdAt(),
+});
+
 export const chatMessages = pgTable("chat_messages", {
   id: id(),
   campaignId: text("campaign_id").notNull().references(() => campaigns.id, { onDelete: "cascade" }),

@@ -87,6 +87,28 @@ export interface JournalEntry {
   visibleTo: string[];
 }
 
+/**
+ * Fichier de la bibliothèque de la campagne.
+ * - map : battle map (image) ;
+ * - token : image de jeton ;
+ * - document : règles, aides de jeu, PDF… lus par les joueurs autorisés.
+ */
+export type AssetKind = "map" | "token" | "document";
+
+export interface Asset {
+  id: string;
+  campaignId: string;
+  kind: AssetKind;
+  name: string;
+  /** Adresse du fichier. Les documents passent par une route qui vérifie les droits. */
+  url: string;
+  mime: string;
+  size: number;
+  uploadedBy: string | null;
+  visibility: Visibility;
+  visibleTo: string[];
+}
+
 /** Tout ce que contient une campagne, côté serveur (non filtré). */
 export interface CampaignData {
   campaign: Campaign;
@@ -95,6 +117,7 @@ export interface CampaignData {
   tokens: Token[];
   sheets: Sheet[];
   journal: JournalEntry[];
+  assets: Asset[];
 }
 
 /** Ce qu'un membre reçoit : déjà filtré selon ses permissions. */

@@ -6,13 +6,14 @@ import Fastify from "fastify";
 import { ZodError } from "zod";
 import { authRoutes } from "./auth/routes";
 import { env } from "./env";
+import { assetRoutes, MAX_DOCUMENT_BYTES } from "./routes/assets";
 import { campaignRoutes } from "./routes/campaigns";
 
 export async function buildApp() {
   const app = Fastify({ logger: { level: env.isProduction ? "info" : "warn" } });
 
   await app.register(cookie);
-  await app.register(multipart, { limits: { fileSize: 20 * 1024 * 1024, files: 1 } });
+  await app.register(multipart, { limits: { fileSize: MAX_DOCUMENT_BYTES, files: 1 } });
 
   app.setErrorHandler((error, _request, reply) => {
     if (error instanceof ZodError) {
@@ -25,6 +26,7 @@ export async function buildApp() {
 
   await app.register(authRoutes);
   await app.register(campaignRoutes);
+  await app.register(assetRoutes);
 
   // Images envoyées par le MJ (cartes, jetons).
   mkdirSync(env.uploadDir, { recursive: true });

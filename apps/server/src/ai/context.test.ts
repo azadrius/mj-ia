@@ -14,6 +14,7 @@ const data: CampaignData = {
   ],
   tokens: [{ id: "t1", sceneId: "s1", name: "Gobelin", x: 3, y: 4, size: 1, color: "#000", imageUrl: null, sheetId: null, controlledBy: [], hidden: true }],
   sheets: [],
+  assets: [],
   journal: [
     { id: "j1", campaignId: "c", kind: "npc", title: "Le maire", content: "Un homme affable.", gmNotes: "C'est un vampire.", visibility: "all", visibleTo: [] },
     { id: "j2", campaignId: "c", kind: "note", title: "Plan", content: "Le culte attaque à minuit.", gmNotes: null, visibility: "gm", visibleTo: [] },
